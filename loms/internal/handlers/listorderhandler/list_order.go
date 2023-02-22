@@ -3,21 +3,13 @@ package listorderhandler
 import (
 	"context"
 	"log"
+	"route256/loms/internal/domain"
+
+	"github.com/pkg/errors"
 )
 
 type Request struct {
 	OrderID int64 `json:"orderID"`
-}
-
-type Item struct {
-	Sku   uint32 `json:"sku"`
-	Count uint16 `json:"count"`
-}
-
-type Response struct {
-	Status string `json:"status"`
-	User   int64  `json:"user"`
-	Items  []Item `json:"items"`
 }
 
 func (r Request) Validate() error {
@@ -25,27 +17,21 @@ func (r Request) Validate() error {
 	return nil
 }
 
-type Handler struct{}
-
-func New() *Handler {
-	return &Handler{}
+type Handler struct {
+	businessLogic *domain.Model
 }
 
-func (h *Handler) Handle(ctx context.Context, request Request) (Response, error) {
-	log.Printf("[handler] listOrder: %+v", request)
-
-	order := [2]int32{1076963, 1148162}
-	items := make([]Item, 0, len(order))
-	for _, sku := range order {
-		items = append(items, Item{
-			Sku:   uint32(sku),
-			Count: 1,
-		})
+func New(businessLogic *domain.Model) *Handler {
+	return &Handler{
+		businessLogic: businessLogic,
 	}
+}
 
-	return Response{
-		Status: "new",
-		User:   1,
-		Items:  items,
-	}, nil
+func (h *Handler) Handle(ctx context.Context, request Request) (domain.Order, error) {
+	log.Printf("[handler listOrder] %+v", request)
+	order, err := h.businessLogic.ListOrder(ctx, request.OrderID)
+	if err != nil {
+		return order, errors.WithMessage(err, "[handler listOrder] ListOrder error")
+	}
+	return order, nil
 }

@@ -22,12 +22,12 @@ type StocksResponse struct {
 }
 
 func (c *Client) Stocks(ctx context.Context, sku uint32) ([]domain.Stock, error) {
-	log.Printf("[client] Stocks, sku: %d", sku)
+	log.Printf("[client Stocks] sku: %d", sku)
 	request := StocksRequest{SKU: sku}
 	response, err := c.stocksRequest(ctx, request)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "stocks request error")
+		return nil, errors.Wrap(err, "[client Stocks] stocks request error")
 	}
 
 	stocks := make([]domain.Stock, 0, len(response.Stocks))
@@ -37,7 +37,7 @@ func (c *Client) Stocks(ctx context.Context, sku uint32) ([]domain.Stock, error)
 			Count:       stock.Count,
 		})
 	}
-	log.Printf("[client] Stocks: %+v", stocks)
+	log.Printf("[client Stocks] %+v", stocks)
 
 	return stocks, nil
 }

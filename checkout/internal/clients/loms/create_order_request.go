@@ -23,7 +23,7 @@ type CreateOrderResponse struct {
 }
 
 func (c *Client) CreateOrder(ctx context.Context, user int64, items []domain.OrderItem) (int64, error) {
-	log.Printf("[client] CreateOrder, user: %d ; items: %+v", user, items)
+	log.Printf("[client CreateOrder] user: %d ; items: %+v", user, items)
 	orderItems := make([]CreateOrderItem, 0, len(items))
 	for _, item := range items {
 		orderItems = append(orderItems, CreateOrderItem{
@@ -35,9 +35,9 @@ func (c *Client) CreateOrder(ctx context.Context, user int64, items []domain.Ord
 	response, err := c.createOrderRequest(ctx, request)
 
 	if err != nil {
-		return 0, errors.Wrap(err, "[client] stocks request error")
+		return 0, errors.Wrap(err, "[client CreateOrder] stocks request error")
 	}
-	log.Printf("[client] CreateOrder, orderId: %d", response.OrderID)
+	log.Printf("[client CreateOrder] orderId: %d", response.OrderID)
 
 	return response.OrderID, nil
 }

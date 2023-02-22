@@ -3,6 +3,9 @@ package stockshandler
 import (
 	"context"
 	"log"
+	"route256/loms/internal/domain"
+
+	"github.com/pkg/errors"
 )
 
 type Request struct {
@@ -14,29 +17,27 @@ func (r Request) Validate() error {
 	return nil
 }
 
-type Item struct {
-	WarehouseID int64  `json:"warehouseID"`
-	Count       uint64 `json:"count"`
-}
-
 type Response struct {
-	Stocks []Item `json:"stocks"`
+	Stocks []domain.StockItem `json:"stocks"`
 }
 
-type Handler struct{}
+type Handler struct {
+	businessLogic *domain.Model
+}
 
-func New() *Handler {
-	return &Handler{}
+func New(businessLogic *domain.Model) *Handler {
+	return &Handler{
+		businessLogic: businessLogic,
+	}
 }
 
 func (h *Handler) Handle(ctx context.Context, request Request) (Response, error) {
-	log.Printf("[handler] stocks: %+v", request)
-	return Response{
-		Stocks: []Item{
-			{
-				WarehouseID: 123,
-				Count:       5,
-			},
-		},
-	}, nil
+	log.Printf("[handler stocks] %+v", request)
+	var response Response
+	stocks, err := h.businessLogic.Stock(ctx, request.SKU)
+	if err != nil {
+		return response, errors.WithMessage(err, "[handler stocks] Stock error")
+	}
+	response.Stocks = stocks
+	return response, nil
 }

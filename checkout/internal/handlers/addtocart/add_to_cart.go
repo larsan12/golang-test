@@ -41,7 +41,7 @@ func (r Request) Validate() error {
 type Response struct{}
 
 func (h *Handler) Handle(ctx context.Context, req Request) (Response, error) {
-	log.Printf("[handler] addToCart: %+v", req)
+	log.Printf("[handler addToCart] %+v", req)
 
 	var response Response = Response{}
 
