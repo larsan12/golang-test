@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"route256/loms/internal/domain"
-	"route256/loms/internal/handlers"
 
 	"github.com/pkg/errors"
 )
@@ -23,10 +22,10 @@ type Response struct {
 }
 
 type Handler struct {
-	businessLogic handlers.BusinessLogic
+	businessLogic domain.BusinessLogic
 }
 
-func New(businessLogic handlers.BusinessLogic) *Handler {
+func New(businessLogic domain.BusinessLogic) *Handler {
 	return &Handler{
 		businessLogic: businessLogic,
 	}

@@ -3,16 +3,16 @@ package deletefromcart
 import (
 	"context"
 	"log"
-	"route256/checkout/internal/handlers"
+	"route256/checkout/internal/domain"
 
 	"github.com/pkg/errors"
 )
 
 type Handler struct {
-	businessLogic handlers.BusinessLogic
+	businessLogic domain.BusinessLogic
 }
 
-func New(businessLogic handlers.BusinessLogic) *Handler {
+func New(businessLogic domain.BusinessLogic) *Handler {
 	return &Handler{
 		businessLogic: businessLogic,
 	}

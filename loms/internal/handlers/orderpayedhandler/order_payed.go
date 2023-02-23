@@ -3,7 +3,7 @@ package orderpayedhandler
 import (
 	"context"
 	"log"
-	"route256/loms/internal/handlers"
+	"route256/loms/internal/domain"
 
 	"github.com/pkg/errors"
 )
@@ -20,10 +20,10 @@ func (r Request) Validate() error {
 }
 
 type Handler struct {
-	businessLogic handlers.BusinessLogic
+	businessLogic domain.BusinessLogic
 }
 
-func New(businessLogic handlers.BusinessLogic) *Handler {
+func New(businessLogic domain.BusinessLogic) *Handler {
 	return &Handler{
 		businessLogic: businessLogic,
 	}
