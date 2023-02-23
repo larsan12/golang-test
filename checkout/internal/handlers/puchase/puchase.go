@@ -3,16 +3,16 @@ package puchase
 import (
 	"context"
 	"log"
-	"route256/checkout/internal/domain"
+	"route256/checkout/internal/handlers"
 
 	"github.com/pkg/errors"
 )
 
 type Handler struct {
-	businessLogic *domain.Model
+	businessLogic handlers.BusinessLogic
 }
 
-func New(businessLogic *domain.Model) *Handler {
+func New(businessLogic handlers.BusinessLogic) *Handler {
 	return &Handler{
 		businessLogic: businessLogic,
 	}

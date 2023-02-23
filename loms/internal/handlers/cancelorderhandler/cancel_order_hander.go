@@ -3,7 +3,7 @@ package cancelorderhandler
 import (
 	"context"
 	"log"
-	"route256/loms/internal/domain"
+	"route256/loms/internal/handlers"
 
 	"github.com/pkg/errors"
 )
@@ -20,10 +20,10 @@ func (r Request) Validate() error {
 }
 
 type Handler struct {
-	businessLogic *domain.Model
+	businessLogic handlers.BusinessLogic
 }
 
-func New(businessLogic *domain.Model) *Handler {
+func New(businessLogic handlers.BusinessLogic) *Handler {
 	return &Handler{
 		businessLogic: businessLogic,
 	}

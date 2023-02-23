@@ -14,8 +14,6 @@ import (
 	"route256/libs/srvwrapper"
 )
 
-const port = ":8080"
-
 func main() {
 	err := config.Init()
 	if err != nil {
@@ -34,7 +32,7 @@ func main() {
 	http.Handle("/listCart", srvwrapper.New(listCartHandler.Handle))
 	http.Handle("/puchase", srvwrapper.New(puchaseHandler.Handle))
 
-	log.Println("listening http at", port)
-	err = http.ListenAndServe(port, nil)
+	log.Println("listening http at", config.ConfigData.Port)
+	err = http.ListenAndServe(":" + config.ConfigData.Port, nil)
 	log.Fatal("cannot listen http", err)
 }
