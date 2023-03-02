@@ -1,38 +1,65 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"net/http"
-	"route256/checkout/internal/clients/loms"
-	"route256/checkout/internal/clients/productservice"
+	"net"
+	checkout_v1 "route256/checkout/internal/api/v1"
+	"route256/checkout/internal/clients/grpc/loms"
+	"route256/checkout/internal/clients/grpc/product"
 	"route256/checkout/internal/config"
 	"route256/checkout/internal/domain"
-	"route256/checkout/internal/handlers/addtocart"
-	"route256/checkout/internal/handlers/deletefromcart"
-	"route256/checkout/internal/handlers/listcart"
-	"route256/checkout/internal/handlers/puchase"
-	"route256/libs/srvwrapper"
+	"route256/checkout/internal/interceptors"
+	desc "route256/checkout/pkg/checkout_v1"
+
+	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
+	// config init
 	err := config.Init()
 	if err != nil {
 		log.Fatal("config init", err)
 	}
-	productServiceClient := productservice.New(config.ConfigData.ProductServiceUrl, config.ConfigData.Token)
-	lomsClient := loms.New(config.ConfigData.Services.Loms)
-	businessLogic := domain.New(lomsClient, productServiceClient)
-	addToCartHandler := addtocart.New(businessLogic)
-	deleteFromCartHandler := deletefromcart.New(businessLogic)
-	listCartHandler := listcart.New(businessLogic)
-	puchaseHandler := puchase.New(businessLogic)
 
-	http.Handle("/addToCart", srvwrapper.New(addToCartHandler.Handle))
-	http.Handle("/deleteFromCart", srvwrapper.New(deleteFromCartHandler.Handle))
-	http.Handle("/listCart", srvwrapper.New(listCartHandler.Handle))
-	http.Handle("/puchase", srvwrapper.New(puchaseHandler.Handle))
+	// loms client
+	lomsConn, err := grpc.Dial(config.ConfigData.Services.Loms, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to connect to server: %v", err)
+	}
+	defer lomsConn.Close()
+	lomsClient := loms.NewClient(lomsConn)
 
-	log.Println("listening http at", config.ConfigData.Port)
-	err = http.ListenAndServe(":" + config.ConfigData.Port, nil)
-	log.Fatal("cannot listen http", err)
+	// product client
+	productConn, err := grpc.Dial(config.ConfigData.Services.Product, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to connect to server: %v", err)
+	}
+	defer productConn.Close()
+	productClient := product.NewClient(productConn, config.ConfigData.Token)
+
+	// services init
+	businessLogic := domain.New(lomsClient, productClient)
+
+	// server init
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))
+	if err != nil {
+		log.Fatalf("listenin error: %v", err)
+	}
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(
+			grpcMiddleware.ChainUnaryServer(
+				interceptors.LoggingInterceptor,
+			),
+		),
+	)
+	reflection.Register(server)
+	desc.RegisterCheckoutV1Server(server, checkout_v1.NewCheckoutV1(businessLogic))
+	log.Printf("grpc server listening at %v port", config.ConfigData.Port)
+	if err = server.Serve(lis); err != nil {
+		log.Fatalf("serve error: %v", err)
+	}
 }

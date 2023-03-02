@@ -9,3 +9,19 @@
 - Общение сервисов по http-json-rpc
 - должны успешно проходить make precommit и make run-all в корневой папке
 - Наладить общение с product-service (в хендлере Checkout.listCart). Токен для общения с product-service получить, написав в личку @pav5000
+
+## checkout config
+
+```
+token: QudSiFFeXkqUFEs7fDTxgLAn
+services:
+  loms: "localhost:50052"
+  product: "route256.pavl.uk:8082"
+port: "50051"
+```
+
+## loms config
+
+```
+port: "50052"
+```
