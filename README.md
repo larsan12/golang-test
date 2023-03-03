@@ -15,7 +15,7 @@
 ```
 token: QudSiFFeXkqUFEs7fDTxgLAn
 services:
-  loms: "localhost:50052"
+  loms: "loms:50052"
   product: "route256.pavl.uk:8082"
 port: "50051"
 ```
