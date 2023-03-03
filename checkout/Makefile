@@ -78,10 +78,4 @@ generate:
 	--go-grpc_out=pkg/product_v1 --go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
 	api/product/v1/product-service.proto
-	protoc -I api/loms/v1 -I vendor-proto \
-	--go_out=pkg/loms_v1 --go_opt=paths=source_relative \
-	--plugin=protoc-gen-go=bin/protoc-gen-go \
-	--go-grpc_out=pkg/loms_v1 --go-grpc_opt=paths=source_relative \
-	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
-	api/loms/v1/loms-service.proto
 

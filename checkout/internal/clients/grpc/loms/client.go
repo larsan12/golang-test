@@ -3,7 +3,7 @@ package loms
 import (
 	"context"
 	"route256/checkout/internal/domain"
-	lomsServiceAPI "route256/checkout/pkg/loms_v1"
+	lomsServiceAPI "route256/loms/pkg/loms_v1"
 	"time"
 
 	"google.golang.org/grpc"
