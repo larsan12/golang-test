@@ -3,7 +3,7 @@ package product
 import (
 	"context"
 	"route256/checkout/internal/domain"
-	productServiceAPI "route256/checkout/pkg/product_v1"
+	productServiceAPI "route256/product/pkg/product_v1"
 	"time"
 
 	"google.golang.org/grpc"

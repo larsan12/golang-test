@@ -1,0 +1,5 @@
+/bin
+/config.yml
+cmd/app/config.yml
+vendor
+vendor-proto

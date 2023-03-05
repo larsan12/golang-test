@@ -4,7 +4,7 @@ GOVER=$(shell go version | perl -nle '/(go\d\S+)/; print $$1;')
 SMARTIMPORTS=${BINDIR}/smartimports_${GOVER}
 LINTVER=v1.51.1
 LINTBIN=${BINDIR}/lint_${GOVER}_${LINTVER}
-PACKAGE=route256/checkout/cmd/app
+PACKAGE=route256/product/cmd/app
 
 all: format build test lint
 
@@ -63,13 +63,10 @@ vendor-proto:
 	fi
 
 generate:
-	mkdir -p pkg/checkout_v1
 	mkdir -p pkg/product_v1
-	mkdir -p pkg/loms_v1
-	protoc -I api/checkout/v1 -I vendor-proto \
-	--go_out=pkg/checkout_v1 --go_opt=paths=source_relative \
+	protoc -I api/product/v1 -I vendor-proto \
+	--go_out=pkg/product_v1 --go_opt=paths=source_relative \
 	--plugin=protoc-gen-go=bin/protoc-gen-go \
-	--go-grpc_out=pkg/checkout_v1 --go-grpc_opt=paths=source_relative \
+	--go-grpc_out=pkg/product_v1 --go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
-	api/checkout/v1/checkout-service.proto
-
+	api/product/v1/product-service.proto
