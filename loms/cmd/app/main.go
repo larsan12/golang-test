@@ -1,16 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"net/http"
-	"route256/libs/srvwrapper"
+	"net"
 	"route256/loms/config"
+	loms_v1 "route256/loms/internal/api/v1"
 	"route256/loms/internal/domain"
-	"route256/loms/internal/handlers/cancelorderhandler"
-	"route256/loms/internal/handlers/createorderhandler"
-	"route256/loms/internal/handlers/listorderhandler"
-	"route256/loms/internal/handlers/orderpayedhandler"
-	"route256/loms/internal/handlers/stockshandler"
+	"route256/loms/internal/interceptors"
+	desc "route256/loms/pkg/loms_v1"
+
+	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -20,19 +22,22 @@ func main() {
 	}
 
 	businessLogic := domain.New()
-	stocksHandler := stockshandler.New(businessLogic)
-	orderHandler := createorderhandler.New(businessLogic)
-	listOrderHandler := listorderhandler.New(businessLogic)
-	orderPayedHandler := orderpayedhandler.New(businessLogic)
-	cancelOrderHandler := cancelorderhandler.New(businessLogic)
 
-	http.Handle("/stocks", srvwrapper.New(stocksHandler.Handle))
-	http.Handle("/createOrder", srvwrapper.New(orderHandler.Handle))
-	http.Handle("/listOrder", srvwrapper.New(listOrderHandler.Handle))
-	http.Handle("/orderPayed", srvwrapper.New(orderPayedHandler.Handle))
-	http.Handle("/cancelOrder", srvwrapper.New(cancelOrderHandler.Handle))
-
-	log.Println("listening http at", config.ConfigData.Port)
-	err = http.ListenAndServe(":" + config.ConfigData.Port, nil)
-	log.Fatal("cannot listen http", err)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))
+	if err != nil {
+		log.Fatalf("listenin error: %v", err)
+	}
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(
+			grpcMiddleware.ChainUnaryServer(
+				interceptors.LoggingInterceptor,
+			),
+		),
+	)
+	reflection.Register(server)
+	desc.RegisterLomsV1Server(server, loms_v1.NewLomsV1(businessLogic))
+	log.Printf("grpc server listening at %v port", config.ConfigData.Port)
+	if err = server.Serve(lis); err != nil {
+		log.Fatalf("serve error: %v", err)
+	}
 }

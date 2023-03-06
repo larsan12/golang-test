@@ -4,7 +4,6 @@ import (
 	"context"
 )
 
-
 type BusinessLogic interface {
 	CancelOrder(ctx context.Context, orderId int64) error
 	CreateOrder(ctx context.Context, user int64, items []OrderItem) (int64, error)
