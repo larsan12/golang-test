@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -8,9 +9,12 @@ import (
 	loms_v1 "route256/loms/internal/api/v1"
 	"route256/loms/internal/domain"
 	"route256/loms/internal/interceptors"
+	repository "route256/loms/internal/repository/postgres"
+	"route256/loms/internal/repository/postgres/transactor"
 	desc "route256/loms/pkg/loms_v1"
 
 	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -20,8 +24,18 @@ func main() {
 	if err != nil {
 		log.Fatal("config init", err)
 	}
+	// init db pool
+	pool, err := pgxpool.Connect(context.Background(), config.ConfigData.Db)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+	defer pool.Close()
 
-	businessLogic := domain.New()
+	// init db repository
+	transactionManager := transactor.NewTransactionManager(pool)
+	repo := repository.NewLomsRepo(transactionManager)
+	
+	businessLogic := domain.New(repo, transactionManager)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))
 	if err != nil {

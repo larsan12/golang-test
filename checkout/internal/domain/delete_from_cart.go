@@ -4,6 +4,10 @@ import (
 	"context"
 )
 
-func (m *Model) DeleteFromCart(ctx context.Context, user int64, sku uint32, count uint16) error {
-	return nil
+func (m *Model) DeleteFromCart(ctx context.Context, cartItem CartItemDiff) error {
+	err := m.transactionManager.RunRepeteableReade(ctx, func(ctxTX context.Context) error {
+		err := m.repository.DeleteFromCart(ctx, cartItem)
+		return err
+	})
+	return err
 }

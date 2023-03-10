@@ -11,15 +11,23 @@ type ProductServiceClient interface {
 	Product(ctx context.Context, sku uint32) (Product, error)
 }
 
+type TransactionManager interface {
+	RunRepeteableReade(ctx context.Context, f func(ctxTX context.Context) error) error
+}
+
 type Model struct {
 	lomsClient           LomsClient
 	productServiceClient ProductServiceClient
+	repository Repository
+	transactionManager TransactionManager
 }
 
-func New(lomsClient LomsClient, productServiceClient ProductServiceClient) *Model {
+func New(lomsClient LomsClient, productServiceClient ProductServiceClient, repository Repository, transactionManager TransactionManager) *Model {
 	return &Model{
 		lomsClient:           lomsClient,
 		productServiceClient: productServiceClient,
+		repository: repository,
+		transactionManager: transactionManager,
 	}
 }
 
@@ -38,9 +46,15 @@ type Product struct {
 	Price uint32
 }
 
+type CartItemDiff struct {
+	User  int64
+	Sku   uint32
+	Count uint16
+}
+
 type CartItem struct {
-	Sku   uint32 `json:"sku"`
-	Count uint16 `json:"count"`
-	Name  string `json:"name"`
-	Price uint32 `json:"price"`
+	Sku   uint32
+	Count uint16
+	Name  string
+	Price uint32
 }

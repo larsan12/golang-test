@@ -5,5 +5,5 @@ import (
 )
 
 func (m *Model) OrderPayed(ctx context.Context, orderId int64) error {
-	return nil
+	return m.repository.PaidOrder(ctx, orderId)
 }

@@ -10,17 +10,20 @@ import (
 
 func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
 	// TODO
-	cart := [2]int32{1076963, 1148162}
-	items := make([]CartItem, 0, len(cart))
+	repoItems, err := m.repository.ListCart(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]CartItem, 0, len(repoItems))
 
-	for _, sku := range cart {
-		info, err := m.GetProduct(ctx, uint32(sku))
+	for _, item := range repoItems {
+		info, err := m.GetProduct(ctx, item.Sku)
 		if err != nil {
-			return items, errors.Wrap(err, "[service ListCart] getProduct error, sku: "+strconv.Itoa(int(sku)))
+			return items, errors.Wrap(err, "[service ListCart] getProduct error, sku: "+strconv.Itoa(int(item.Sku)))
 		}
 		items = append(items, CartItem{
-			Sku:   uint32(sku),
-			Count: 1,
+			Sku:   item.Sku,
+			Count: item.Count,
 			Name:  info.Name,
 			Price: info.Price,
 		})

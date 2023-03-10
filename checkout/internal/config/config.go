@@ -14,6 +14,7 @@ type ConfigStruct struct {
 		Product string `yaml:"product"`
 	} `yaml:"services"`
 	Port string `yaml:"port"`
+	Db string `yaml:"db"`
 }
 
 var ConfigData ConfigStruct

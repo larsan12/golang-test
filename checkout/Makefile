@@ -73,3 +73,8 @@ generate:
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
 	api/checkout/v1/checkout-service.proto
 
+migration-create:
+	goose -dir ./migrations create $(name) sql
+
+migration-run:
+	sh ./migration.sh

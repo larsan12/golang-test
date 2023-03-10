@@ -1,10 +1,21 @@
 package domain
 
+import "context"
+
 type Model struct {
+	repository Repository
+	transactionManager TransactionManager
 }
 
-func New() *Model {
-	return &Model{}
+func New(repository Repository, transactionManager TransactionManager) *Model {
+	return &Model{
+		repository,
+		transactionManager,
+	}
+}
+
+type TransactionManager interface {
+	RunRepeteableReade(ctx context.Context, f func(ctxTX context.Context) error) error
 }
 
 type OrderItem struct {

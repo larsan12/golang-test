@@ -32,6 +32,8 @@ func (m *Model) Puchase(ctx context.Context, user int64) (int64, error) {
 	if err != nil {
 		return order, errors.Wrap(err, "[service puchase] CreateOrder error")
 	}
+
+	m.repository.DeleteCart(ctx, user)
 	log.Printf("[service] success puchase, orderId: %d", order)
 
 	return order, err

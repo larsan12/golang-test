@@ -5,5 +5,8 @@ import (
 )
 
 func (m *Model) CancelOrder(ctx context.Context, orderId int64) error {
-	return nil
+	return m.transactionManager.RunRepeteableReade(ctx, func(ctxTX context.Context) error {
+		err := m.repository.CancelOrder(ctxTX, orderId)
+		return err
+	})
 }

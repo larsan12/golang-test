@@ -8,7 +8,7 @@ import (
 )
 
 func (i *Implemetation) OrderPayed(ctx context.Context, req *desc.OrderPayedRequest) (*emptypb.Empty, error) {
-	err := i.businessLogic.CancelOrder(ctx, req.GetOrderId())
+	err := i.businessLogic.OrderPayed(ctx, req.GetOrderId())
 	if err != nil {
 		return nil, err
 	}
