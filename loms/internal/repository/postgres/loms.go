@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"route256/loms/internal/domain"
 	"route256/loms/internal/repository/postgres/transactor"
 	"route256/loms/internal/repository/schema"
@@ -41,23 +40,7 @@ const (
 	ReserveStatusPaid = "paid"
 )
 
-func (r *LomsRepo) GetStocks(ctx context.Context, sku uint32) ([]schema.Stock, error) {
-	db := r.QueryEngineProvider.GetQueryEngine(ctx)
-	var stocks []schema.Stock
-	rawQuery, args, err := psql.Select(stocksColumns...).
-		From(stocksTable).
-		Where(sq.Eq{"sku": sku}).
-		Where(sq.Gt{"count": 0}).
-		ToSql()
-	
-	if err != nil {
-		return stocks, err
-	}
-	errorr := pgxscan.Select(ctx, db, &stocks, rawQuery, args...)
-	return stocks, errorr
-}
-
-func (r *LomsRepo) GetStockReservations(ctx context.Context, orderId int64) ([]schema.StockReservation, error) {
+func (r *LomsRepo) GetStockReservations(ctx context.Context, orderId int64) ([]domain.StockReservation, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
 	var stockReservations []schema.StockReservation
 	rawQuery, args, err := psql.Select(stocksReservationColumns...).
@@ -66,10 +49,25 @@ func (r *LomsRepo) GetStockReservations(ctx context.Context, orderId int64) ([]s
 		ToSql()
 	
 	if err != nil {
-		return stockReservations, err
+		return nil, err
 	}
 	errorr := pgxscan.Select(ctx, db, &stockReservations, rawQuery, args...)
-	return stockReservations, errorr
+	if errorr != nil {
+		return nil, errorr
+	}
+
+	result := make([]domain.StockReservation, len(stockReservations))
+	if err != nil {
+		return nil, err;
+	}
+	for i, stock := range stockReservations {
+		result[i].OrderId = stock.OrderId
+		result[i].Sku = stock.Sku
+		result[i].WarehouseId = stock.WarehouseId
+		result[i].Count = stock.Count
+		result[i].Status = stock.Status
+	}
+	return result, nil
 }
 
 func (r *LomsRepo) UpdateStock(ctx context.Context, sku uint32, warehouseId int64, diff int64) error {
@@ -93,7 +91,7 @@ func (r *LomsRepo) UpdateStock(ctx context.Context, sku uint32, warehouseId int6
 	return nil
 }
 
-func (r *LomsRepo) CreateStockReservation(ctx context.Context, stockReserv schema.StockReservation) error {
+func (r *LomsRepo) CreateStockReservation(ctx context.Context, stockReserv domain.StockReservation) error {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
 	rawQuery, args, err := psql.Insert(stocksReservationTable).
 		Columns("order_id", "sku", "warehouse_id", "count").
@@ -108,7 +106,7 @@ func (r *LomsRepo) CreateStockReservation(ctx context.Context, stockReserv schem
 	return nil
 }
 
-func (r *LomsRepo) DeleteStockReservation(ctx context.Context, stockReserv schema.StockReservation) error {
+func (r *LomsRepo) DeleteStockReservation(ctx context.Context, stockReserv domain.StockReservation) error {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
 	rawQuery, args, err := psql.Delete(stocksReservationTable).
 		Where(sq.Eq{"order_id": stockReserv.OrderId, "warehouse_id": stockReserv.WarehouseId, "sku": stockReserv.Sku}).
@@ -139,9 +137,10 @@ func (r *LomsRepo) CreateOrder(ctx context.Context, user int64) (int64, error) {
 }
 
 
-func (r *LomsRepo) GetOrder(ctx context.Context, orderId int64) (schema.Order, error) {
+func (r *LomsRepo) GetOrder(ctx context.Context, orderId int64) (domain.Order, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
-	var order schema.Order
+	var order domain.Order
+	var schemaOrder schema.Order
 	rawQuery, args, err := psql.Select(ordersColumns...).
 		From(ordersTable).
 		Where(sq.Eq{"order_id": orderId}).
@@ -150,14 +149,20 @@ func (r *LomsRepo) GetOrder(ctx context.Context, orderId int64) (schema.Order, e
 	if err != nil {
 		return order, err
 	}
-	errorr := pgxscan.Get(ctx, db, &order, rawQuery, args...)
+	errorr := pgxscan.Get(ctx, db, &schemaOrder, rawQuery, args...)
+	if errorr != nil {
+		return order, errorr
+	}
+	order.User = int64(schemaOrder.UserId)
+	order.Status = schemaOrder.Status
 	return order, errorr
 }
 
 
-func (r *LomsRepo) GetOrderItems(ctx context.Context, orderId int64) ([]schema.OrderItem, error) {
+func (r *LomsRepo) GetOrderItems(ctx context.Context, orderId int64) ([]domain.OrderItem, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
-	var items []schema.OrderItem
+	var items []domain.OrderItem
+	var schemaItems []schema.OrderItem
 	rawQuery, args, err := psql.Select("order_id", "sku", "SUM(count) as count").
 		From(stocksReservationTable).
 		Where(sq.Eq{"order_id": orderId}).
@@ -167,63 +172,37 @@ func (r *LomsRepo) GetOrderItems(ctx context.Context, orderId int64) ([]schema.O
 	if err != nil {
 		return items, err
 	}
-	errorr := pgxscan.Select(ctx, db, &items, rawQuery, args...)
+	errorr := pgxscan.Select(ctx, db, &schemaItems, rawQuery, args...)
+	items = make([]domain.OrderItem, len(schemaItems))
+	for i, item := range schemaItems {
+		items[i].Count = uint16(item.Count)
+		items[i].Sku = item.Sku
+	}
 	return items, errorr
 }
 
 
-func (r *LomsRepo) MakeOrder(ctx context.Context, user int64, items []domain.OrderItem) (int64, error) {
-	orderId, err := r.CreateOrder(ctx, user)
+func (r *LomsRepo) GetStocks(ctx context.Context, sku uint32) ([]domain.StockItem, error) {
+	db := r.QueryEngineProvider.GetQueryEngine(ctx)
+	var stocks []schema.Stock
+	rawQuery, args, err := psql.Select(stocksColumns...).
+		From(stocksTable).
+		Where(sq.Eq{"sku": sku}).
+		Where(sq.Gt{"count": 0}).
+		ToSql()
+
 	if err != nil {
-		return orderId, err
+		return nil, err
+	}
+	errorr := pgxscan.Select(ctx, db, &stocks, rawQuery, args...)
+	if errorr != nil {
+		return nil, errorr
 	}
 
-	for _, item := range items {
-		stocks, err := r.GetStocks(ctx, item.Sku)
-		if err != nil {
-			return orderId, err;
-		}
-		restCount := item.Count
-		for _, stock := range stocks {
-			var reservation schema.StockReservation = schema.StockReservation{
-				OrderId: orderId,
-				WarehouseId: stock.WarehouseId,
-				Sku: stock.Sku,
-			}
-			reservation.WarehouseId = stock.WarehouseId
-			if stock.Count >= uint64(restCount) {
-				reservation.Count = uint32(restCount)
-				restCount = 0
-			} else {
-				restCount = restCount - uint16(stock.Count)
-				reservation.Count = uint32(stock.Count)
-			}
-			err = r.CreateStockReservation(ctx, reservation)
-			if err != nil {
-				return 0, err
-			}
-			stock.Count -= uint64(reservation.Count)
-			err = r.UpdateStock(ctx, stock.Sku, stock.WarehouseId, -int64(reservation.Count))
-			if err != nil {
-				return 0, err
-			}
-			if restCount == 0 {
-				break;
-			}
-		}
-		if restCount != 0 {
-			return 0, errors.New("not enough stocks")
-		}
-	}
-	return orderId, nil
-}
-
-func (r *LomsRepo) Stock(ctx context.Context, sku uint32) ([]domain.StockItem, error) {
-	stocks, err := r.GetStocks(ctx, sku)
+	result := make([]domain.StockItem, len(stocks))
 	if err != nil {
 		return nil, err;
 	}
-	var result []domain.StockItem = make([]domain.StockItem, len(stocks))
 	for i, stock := range stocks {
 		result[i].Count = stock.Count
 		result[i].WarehouseID = stock.WarehouseId
@@ -246,65 +225,17 @@ func (r *LomsRepo) OrderSetStatus(ctx context.Context, orderId int64, status str
 	return nil
 }
 
-func (r *LomsRepo) PaidOrder(ctx context.Context, orderId int64) error {
-	err := r.OrderSetStatus(ctx, orderId, OrderStatusPaid)
-	if err != nil {
-		return err
-	}
+func (r *LomsRepo) ReservSetStatuses(ctx context.Context, orderId int64, status string) error {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
 	rawQuery, args, err := psql.Update(stocksReservationTable).
 		Where(sq.Eq{"order_id": orderId}).
-		Set("status", ReserveStatusPaid).
+		Set("status", status).
 		ToSql()
 	if err != nil {
 		return err
 	}
 	if _, err := db.Exec(ctx, rawQuery, args...); err != nil {
 		return err
-	}
-	return nil
-}
-
-func (r *LomsRepo) ListOrder(ctx context.Context, orderId int64) (domain.Order, error) {
-	var order domain.Order
-	repoOrder, err := r.GetOrder(ctx, orderId)
-	if err != nil {
-		return order, err
-	}
-	order.Status = repoOrder.Status
-	order.User = int64(repoOrder.UserId)
-	orderItems, err := r.GetOrderItems(ctx, orderId)
-	if err != nil {
-		return order, err
-	}
-	items := make([]domain.OrderItem, len(orderItems))
-	for i, item := range orderItems {
-		items[i].Count = uint16(item.Count)
-		items[i].Sku = item.Sku
-	}
-	order.Items = items
-	return order, nil
-}
-
-func (r *LomsRepo) CancelOrder(ctx context.Context, orderId int64) error {
-	err := r.OrderSetStatus(ctx, orderId, OrderStatusCanceled)
-	if err != nil {
-		return err
-	}
-	reservations, err := r.GetStockReservations(ctx, orderId)
-	if err != nil {
-		return err
-	}
-
-	for _, reserv := range reservations {
-		err = r.UpdateStock(ctx, reserv.Sku, reserv.WarehouseId, int64(reserv.Count))
-		if err != nil {
-			return err
-		}
-		err = r.DeleteStockReservation(ctx, reserv)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }

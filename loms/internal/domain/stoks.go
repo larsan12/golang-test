@@ -5,5 +5,5 @@ import (
 )
 
 func (m *Model) Stock(ctx context.Context, sku uint32) ([]StockItem, error) {
-	return m.repository.Stock(ctx, sku)
+	return m.repository.GetStocks(ctx, sku)
 }

@@ -30,9 +30,10 @@ const (
 	cartItemsTable = "cart_items"
 )
 
-func (r *CartRepo) GetCartItem(ctx context.Context, user int64, sku uint32) (schema.CartItem, error) {
+func (r *CartRepo) GetCartItem(ctx context.Context, user int64, sku uint32) (domain.CartItemDiff, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
-	var item schema.CartItem
+	var schemaItem schema.CartItem
+	var item domain.CartItemDiff
 	rawQuery, args, err := psql.Select(cartItemsColumns...).
 		From(cartItemsTable).
 		Where(sq.Eq{"user_id": user, "sku": sku}).
@@ -41,7 +42,10 @@ func (r *CartRepo) GetCartItem(ctx context.Context, user int64, sku uint32) (sch
 	if err != nil {
 		return item, err
 	}
-	error := pgxscan.Get(ctx, db, &item, rawQuery, args...)
+	error := pgxscan.Get(ctx, db, &schemaItem, rawQuery, args...)
+	item.User = schemaItem.UserId
+	item.Count = schemaItem.Count
+	item.Sku = schemaItem.Sku
 	return item, error
 }
 
@@ -73,19 +77,6 @@ func (r *CartRepo) UpdateCartItemCount(ctx context.Context, cartItem domain.Cart
 		return err
 	}
 	return nil
-}
-
-func (r *CartRepo) AddToCart(ctx context.Context, cartItem domain.CartItemDiff) error {
-	
-	item, err := r.GetCartItem(ctx, cartItem.User, cartItem.Sku)
-	if err != nil {
-		if err.Error() == "scanning one: no rows in result set" {
-			return r.CreateCartItem(ctx, cartItem)
-		}
-		return err
-	} else {
-		return r.UpdateCartItemCount(ctx, cartItem, item.Count + cartItem.Count)
-	}
 }
 
 

@@ -25,8 +25,15 @@ func (m *Model) AddToCart(ctx context.Context, cartItem CartItemDiff) error {
 
 			// in transaction
 			err := m.transactionManager.RunRepeteableReade(ctx, func(ctxTX context.Context) error {
-				err := m.repository.AddToCart(ctxTX, cartItem)
-				return err
+				item, err := m.repository.GetCartItem(ctxTX, cartItem.User, cartItem.Sku)
+				if err != nil {
+					if err.Error() == "scanning one: no rows in result set" {
+						return m.repository.CreateCartItem(ctxTX, cartItem)
+					}
+					return err
+				} else {
+					return m.repository.UpdateCartItemCount(ctxTX, cartItem, item.Count + cartItem.Count)
+				}
 			})
 
 			if err != nil {
