@@ -23,6 +23,12 @@ up-checkout-db:
 
 up-db: up-loms-db up-checkout-db
 
+run-loms:
+	sudo docker compose up -d loms --force-recreate --build
+
+run-checkout:
+	sudo docker compose up -d checkout --force-recreate --build
+
 down: 
 	sudo docker compose down
 

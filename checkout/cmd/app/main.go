@@ -58,6 +58,7 @@ func main() {
 	productClient := product.NewClient(productConn, config.ConfigData.Token)
 
 	// pools init
+	// глобальный пул для запросов к продукт сервису, вне зависимости от колличества запросов к серверу - всегда будет не более 10 паралельных запросов к продукт сервису
 	productsPool := workerpool.NewPool[uint32, domain.Product](context.Background(), 10)
 
 	// services init

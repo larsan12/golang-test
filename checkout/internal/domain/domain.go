@@ -56,6 +56,7 @@ type OrderItem struct {
 type Product struct {
 	Name  string
 	Price uint32
+	Sku   uint32
 }
 
 type CartItemDiff struct {

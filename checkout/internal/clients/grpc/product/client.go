@@ -39,6 +39,7 @@ func (c *client) Product(ctx context.Context, sku uint32) (domain.Product, error
 	}
 	product.Name = res.GetName()
 	product.Price = res.GetPrice()
+	product.Sku = sku
 
 	return product, nil
 }
