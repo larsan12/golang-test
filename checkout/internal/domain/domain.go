@@ -1,6 +1,9 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"route256/libs/workerpool"
+)
 
 type LomsClient interface {
 	Stocks(ctx context.Context, sku uint32) ([]Stock, error)
@@ -18,16 +21,25 @@ type TransactionManager interface {
 type Model struct {
 	lomsClient           LomsClient
 	productServiceClient ProductServiceClient
-	repository Repository
-	transactionManager TransactionManager
+	repository           Repository
+	transactionManager   TransactionManager
+
+	productWorkerPool workerpool.WorkerPool[uint32, Product]
 }
 
-func New(lomsClient LomsClient, productServiceClient ProductServiceClient, repository Repository, transactionManager TransactionManager) *Model {
+func New(
+	lomsClient LomsClient,
+	productServiceClient ProductServiceClient,
+	repository Repository,
+	transactionManager TransactionManager,
+	productWorkerPool workerpool.WorkerPool[uint32, Product],
+) *Model {
 	return &Model{
-		lomsClient:           lomsClient,
-		productServiceClient: productServiceClient,
-		repository: repository,
-		transactionManager: transactionManager,
+		lomsClient,
+		productServiceClient,
+		repository,
+		transactionManager,
+		productWorkerPool,
 	}
 }
 

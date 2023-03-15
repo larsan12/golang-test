@@ -14,6 +14,7 @@ import (
 	repository "route256/checkout/internal/repository/postgres"
 	"route256/checkout/internal/repository/postgres/transactor"
 	desc "route256/checkout/pkg/checkout_v1"
+	"route256/libs/workerpool"
 
 	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -56,8 +57,11 @@ func main() {
 	defer productConn.Close()
 	productClient := product.NewClient(productConn, config.ConfigData.Token)
 
+	// pools init
+	productsPool := workerpool.NewPool[uint32, domain.Product](context.Background(), 10)
+
 	// services init
-	businessLogic := domain.New(lomsClient, productClient, repo, transactionManager)
+	businessLogic := domain.New(lomsClient, productClient, repo, transactionManager, productsPool)
 
 	// server init
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))
