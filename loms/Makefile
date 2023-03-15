@@ -70,3 +70,10 @@ generate:
 	--go-grpc_out=pkg/loms_v1 --go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
 	api/loms/v1/loms-service.proto
+
+migration-create:
+	goose -dir ./migrations create $(name) sql
+
+migration-run:
+	sh ./migration.sh
+	

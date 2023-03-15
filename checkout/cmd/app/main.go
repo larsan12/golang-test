@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -10,9 +11,12 @@ import (
 	"route256/checkout/internal/config"
 	"route256/checkout/internal/domain"
 	"route256/checkout/internal/interceptors"
+	repository "route256/checkout/internal/repository/postgres"
+	"route256/checkout/internal/repository/postgres/transactor"
 	desc "route256/checkout/pkg/checkout_v1"
 
 	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -24,6 +28,17 @@ func main() {
 	if err != nil {
 		log.Fatal("config init", err)
 	}
+
+	// init db pool
+	pool, err := pgxpool.Connect(context.Background(), config.ConfigData.Db)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+	defer pool.Close()
+
+	// init db repository
+	transactionManager := transactor.NewTransactionManager(pool)
+	repo := repository.NewCartRepo(transactionManager)
 
 	// loms client
 	lomsConn, err := grpc.Dial(config.ConfigData.Services.Loms, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -42,7 +57,7 @@ func main() {
 	productClient := product.NewClient(productConn, config.ConfigData.Token)
 
 	// services init
-	businessLogic := domain.New(lomsClient, productClient)
+	businessLogic := domain.New(lomsClient, productClient, repo, transactionManager)
 
 	// server init
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))

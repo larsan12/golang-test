@@ -10,6 +10,15 @@
 - должны успешно проходить make precommit и make run-all в корневой папке
 - Наладить общение с product-service (в хендлере Checkout.listCart). Токен для общения с product-service получить, написав в личку @pav5000
 
+## how to run:
+
+```
+make up-db
+make run-services
+cd loms && make migration-run
+cd checkout && make migration-run
+```
+
 ## checkout config
 
 ```
@@ -18,10 +27,12 @@ services:
   loms: "loms:50052"
   product: "route256.pavl.uk:8082"
 port: "50051"
+db: "postgres://user:password@checkout-pgbouncer:6433/checkout"
 ```
 
 ## loms config
 
 ```
 port: "50052"
+db: "postgres://user:password@loms-pgbouncer:6432/loms"
 ```
