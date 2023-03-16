@@ -32,7 +32,7 @@ func NewLimiter(rps uint, burst uint) Limiter {
 	}
 
 	if burst > rps {
-		log.Fatal("burst must be less than rps")
+		log.Fatal("burst must be less or equal rps")
 	}
 
 	// создаем канал с буфером размером {burst}
