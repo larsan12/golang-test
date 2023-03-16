@@ -14,15 +14,9 @@ func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
 	}
 	items := make([]CartItem, 0, len(repoItems))
 
-	// new context with cancel
-	poolCtx, cancel := context.WithCancel(ctx)
-	getProduct := func(sku uint32) Product {
-		product, err := m.GetProduct(poolCtx, sku)
-		if err != nil {
-			log.Print("error getProduct, cancel pool", err)
-			cancel()
-		}
-		return product
+	// create task
+	getProduct := func(sku uint32) (Product, error) {
+		return m.GetProduct(ctx, sku)
 	}
 
 	// create tasks
@@ -35,11 +29,11 @@ func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
 	}
 
 	// execute in pool
-	products, err := m.productWorkerPool.Execute(poolCtx, tasks)
+	products, err := m.productWorkerPool.Execute(ctx, tasks)
 
 	// check error
-	if poolCtx.Err() != nil {
-		return nil, poolCtx.Err()
+	if err != nil {
+		return nil, err
 	}
 
 	// create map sku:product

@@ -8,7 +8,7 @@ import (
 // описание внешнего интерфейса
 
 type Task[In, Out any] struct {
-	Run    func(In) Out
+	Run    func(In) (Out, error)
 	InArgs In
 }
 
@@ -28,19 +28,26 @@ var _ WorkerPool[any, any] = implemetation[any, any]{}
 
 // добавляем каналы в таску
 // outChannel - канал для результатов выполнения, для каждого набора тасок свой канал
+// errorChannel - канал для ошибок выполнения тасок, если есть одна ошибка - отменяем весь запрос
 // stopChannel - канал на случай непредвиденного закрытия канала outChannel
-// stopChannel закрывается прямо перед закрытием outChannel
+// stopChannel закрывается прямо перед закрытием outChannel и errorChannel
 type TaskWithChannel[In, Out any] struct {
 	Task[In, Out]
-	outChannel  chan<- Out
-	stopChannel <-chan struct{}
+	outChannel   chan<- Out
+	errorChannel chan<- error
+	stopChannel  <-chan struct{}
 }
+
+var (
+	counter int = 0
+)
 
 // реализуем воркера
 func worker[In, Out any](ctx context.Context, tasks <-chan TaskWithChannel[In, Out]) {
 	// случаем глобальный канал с тасками
 	for task := range tasks {
 		var result Out
+		var err error
 
 		// проверям не закрыт ли контекст, иначе завершаем воркера
 		select {
@@ -56,14 +63,23 @@ func worker[In, Out any](ctx context.Context, tasks <-chan TaskWithChannel[In, O
 		case <-task.stopChannel:
 			continue
 		default:
-			result = task.Run(task.InArgs)
+			result, err = task.Run(task.InArgs)
 		}
 
-		// если stopChannel не закрыт - отправляем в outChannel результат
-		select {
-		case <-task.stopChannel:
-		default:
-			task.outChannel <- result
+		if err != nil {
+			// если есть ошибка - отправляем в errorChannel предварительно проверив stopChannel
+			select {
+			case <-task.stopChannel:
+			default:
+				task.errorChannel <- err
+			}
+		} else {
+			// если stopChannel не закрыт - отправляем в outChannel результат
+			select {
+			case <-task.stopChannel:
+			default:
+				task.outChannel <- result
+			}
 		}
 	}
 }
@@ -101,6 +117,10 @@ func (p implemetation[In, Out]) Execute(ctx context.Context, tasks []Task[In, Ou
 	// для каждого вызова создаётся канал с результатами
 	outChannel := make(chan Out, len(tasks))
 	defer close(outChannel)
+	// канал с ошибками
+	errorChannel := make(chan error, len(tasks))
+	defer close(errorChannel)
+	// стоп канал - закрывается в первую очередь
 	stopChannel := make(chan struct{})
 	defer close(stopChannel)
 
@@ -116,6 +136,7 @@ func (p implemetation[In, Out]) Execute(ctx context.Context, tasks []Task[In, Ou
 			p.globalTasksChanel <- TaskWithChannel[In, Out]{
 				Task,
 				outChannel,
+				errorChannel,
 				stopChannel,
 			}
 		}
@@ -130,6 +151,8 @@ func (p implemetation[In, Out]) Execute(ctx context.Context, tasks []Task[In, Ou
 			return result, ctx.Err()
 		case <-p.globalStopChannel:
 			return result, errors.New("WorkerPool is closed")
+		case err := <-errorChannel:
+			return result, err
 		case res := <-outChannel:
 			result = append(result, res)
 		}
