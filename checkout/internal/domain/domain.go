@@ -24,7 +24,7 @@ type Model struct {
 	repository           Repository
 	transactionManager   TransactionManager
 
-	productWorkerPool workerpool.WorkerPool[uint32, Product]
+	getProductPool workerpool.WorkerPool[uint32, Product]
 }
 
 func New(
@@ -32,14 +32,14 @@ func New(
 	productServiceClient ProductServiceClient,
 	repository Repository,
 	transactionManager TransactionManager,
-	productWorkerPool workerpool.WorkerPool[uint32, Product],
+	getProductPool workerpool.WorkerPool[uint32, Product],
 ) *Model {
 	return &Model{
 		lomsClient,
 		productServiceClient,
 		repository,
 		transactionManager,
-		productWorkerPool,
+		getProductPool,
 	}
 }
 

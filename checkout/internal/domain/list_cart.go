@@ -29,7 +29,7 @@ func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
 	}
 
 	// execute in pool
-	products, err := m.productWorkerPool.Execute(ctx, tasks)
+	products, err := m.getProductPool.Execute(ctx, tasks)
 
 	// check error
 	if err != nil {

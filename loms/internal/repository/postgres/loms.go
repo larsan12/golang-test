@@ -5,6 +5,7 @@ import (
 	"route256/loms/internal/domain"
 	"route256/loms/internal/repository/postgres/transactor"
 	"route256/loms/internal/repository/schema"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/georgysavva/scany/pgxscan"
@@ -21,23 +22,23 @@ func NewLomsRepo(provider transactor.QueryEngineProvider) *LomsRepo {
 }
 
 var (
-	ordersColumns = []string{"order_id", "user_id", "status"}
+	ordersColumns            = []string{"order_id", "user_id", "status", "updated_at", "created_at"}
 	stocksReservationColumns = []string{"order_id", "sku", "warehouse_id", "count", "status"}
-	stocksColumns = []string{"warehouse_id", "sku", "count"}
-	psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+	stocksColumns            = []string{"warehouse_id", "sku", "count"}
+	psql                     = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 )
 
 const (
-	ordersTable = "orders"
+	ordersTable            = "orders"
 	stocksReservationTable = "stocks_reservation"
-	stocksTable = "stocks"
+	stocksTable            = "stocks"
 )
 
 const (
-	OrderStatusNew = "new"
-	OrderStatusPaid = "paid"
+	OrderStatusNew      = "new"
+	OrderStatusPaid     = "paid"
 	OrderStatusCanceled = "cancelled"
-	ReserveStatusPaid = "paid"
+	ReserveStatusPaid   = "paid"
 )
 
 func (r *LomsRepo) GetStockReservations(ctx context.Context, orderId int64) ([]domain.StockReservation, error) {
@@ -47,7 +48,7 @@ func (r *LomsRepo) GetStockReservations(ctx context.Context, orderId int64) ([]d
 		From(stocksReservationTable).
 		Where(sq.Eq{"order_id": orderId}).
 		ToSql()
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func (r *LomsRepo) GetStockReservations(ctx context.Context, orderId int64) ([]d
 
 	result := make([]domain.StockReservation, len(stockReservations))
 	if err != nil {
-		return nil, err;
+		return nil, err
 	}
 	for i, stock := range stockReservations {
 		result[i].OrderId = stock.OrderId
@@ -136,7 +137,6 @@ func (r *LomsRepo) CreateOrder(ctx context.Context, user int64) (int64, error) {
 	return order.OrderId, nil
 }
 
-
 func (r *LomsRepo) GetOrder(ctx context.Context, orderId int64) (domain.Order, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
 	var order domain.Order
@@ -145,7 +145,7 @@ func (r *LomsRepo) GetOrder(ctx context.Context, orderId int64) (domain.Order, e
 		From(ordersTable).
 		Where(sq.Eq{"order_id": orderId}).
 		ToSql()
-	
+
 	if err != nil {
 		return order, err
 	}
@@ -158,7 +158,6 @@ func (r *LomsRepo) GetOrder(ctx context.Context, orderId int64) (domain.Order, e
 	return order, errorr
 }
 
-
 func (r *LomsRepo) GetOrderItems(ctx context.Context, orderId int64) ([]domain.OrderItem, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
 	var items []domain.OrderItem
@@ -168,7 +167,7 @@ func (r *LomsRepo) GetOrderItems(ctx context.Context, orderId int64) ([]domain.O
 		Where(sq.Eq{"order_id": orderId}).
 		GroupBy("order_id", "sku").
 		ToSql()
-	
+
 	if err != nil {
 		return items, err
 	}
@@ -180,7 +179,6 @@ func (r *LomsRepo) GetOrderItems(ctx context.Context, orderId int64) ([]domain.O
 	}
 	return items, errorr
 }
-
 
 func (r *LomsRepo) GetStocks(ctx context.Context, sku uint32) ([]domain.StockItem, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
@@ -201,7 +199,7 @@ func (r *LomsRepo) GetStocks(ctx context.Context, sku uint32) ([]domain.StockIte
 
 	result := make([]domain.StockItem, len(stocks))
 	if err != nil {
-		return nil, err;
+		return nil, err
 	}
 	for i, stock := range stocks {
 		result[i].Count = stock.Count
@@ -215,6 +213,7 @@ func (r *LomsRepo) OrderSetStatus(ctx context.Context, orderId int64, status str
 	rawQuery, args, err := psql.Update(ordersTable).
 		Where(sq.Eq{"order_id": orderId}).
 		Set("status", status).
+		Set("updated_at", time.Now()).
 		ToSql()
 	if err != nil {
 		return err
@@ -238,4 +237,32 @@ func (r *LomsRepo) ReservSetStatuses(ctx context.Context, orderId int64, status 
 		return err
 	}
 	return nil
+}
+
+func (r *LomsRepo) GetOldOrders(ctx context.Context, dateFrom time.Time) ([]domain.Order, error) {
+	db := r.QueryEngineProvider.GetQueryEngine(ctx)
+	var orders []schema.Order
+	rawQuery, args, err := psql.Select(ordersColumns...).
+		From(ordersTable).
+		Where(sq.LtOrEq{"updated_at": dateFrom}).
+		ToSql()
+
+	if err != nil {
+		return nil, err
+	}
+	errorr := pgxscan.Select(ctx, db, &orders, rawQuery, args...)
+	if errorr != nil {
+		return nil, errorr
+	}
+
+	result := make([]domain.Order, len(orders))
+	if err != nil {
+		return nil, err
+	}
+	for i, order := range orders {
+		result[i].OrderId = order.OrderId
+		result[i].Status = order.Status
+		result[i].User = int64(order.UserId)
+	}
+	return result, nil
 }

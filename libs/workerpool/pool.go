@@ -13,12 +13,20 @@ type Task[In, Out any] struct {
 }
 
 type WorkerPool[In, Out any] interface {
-	Execute(context.Context, []Task[In, Out]) ([]Out, error)
+	Execute(context.Context, []Task[In, Out]) ([]Out, error) // выполняем запрос из массива задач - получаем массив ответов
 	Close()
 }
 
 // проверка типов
 var _ WorkerPool[any, any] = implemetation[any, any]{}
+
+// globalTasksChanel - общий канал с тасками для всех воркеров
+// globalStopChannel - канал для остановки, закрываем его перед закрытием globalTasksChanel
+type implemetation[In, Out any] struct {
+	workersAmount     int
+	globalTasksChanel chan TaskWithChannel[In, Out]
+	globalStopChannel chan struct{}
+}
 
 /**
 	по задумке - глобально делаем worker pool и запускаем N воркеров, один общий канал для входящих задач
@@ -29,18 +37,13 @@ var _ WorkerPool[any, any] = implemetation[any, any]{}
 // добавляем каналы в таску
 // outChannel - канал для результатов выполнения, для каждого набора тасок свой канал
 // errorChannel - канал для ошибок выполнения тасок, если есть одна ошибка - отменяем весь запрос
-// stopChannel - канал на случай непредвиденного закрытия канала outChannel
-// stopChannel закрывается прямо перед закрытием outChannel и errorChannel
+// stopChannel - канал на случай непредвиденного закрытия канала outChannel, закрывается до закрытия outChannel и errorChannel
 type TaskWithChannel[In, Out any] struct {
 	Task[In, Out]
 	outChannel   chan<- Out
 	errorChannel chan<- error
 	stopChannel  <-chan struct{}
 }
-
-var (
-	counter int = 0
-)
 
 // реализуем воркера
 func worker[In, Out any](ctx context.Context, tasks <-chan TaskWithChannel[In, Out]) {
@@ -58,7 +61,6 @@ func worker[In, Out any](ctx context.Context, tasks <-chan TaskWithChannel[In, O
 
 		// пробуем выполнить таску
 		// если stopChannel закрыт то пропускаем итерацию и не выполняем таску
-		// иначе выполняем таску
 		select {
 		case <-task.stopChannel:
 			continue
@@ -82,14 +84,6 @@ func worker[In, Out any](ctx context.Context, tasks <-chan TaskWithChannel[In, O
 			}
 		}
 	}
-}
-
-// globalTasksChanel - общий канал с тасками для всех воркеров
-// globalStopChannel - канал для остановки, закрываем его перед закрытием globalTasksChanel
-type implemetation[In, Out any] struct {
-	workersAmount     int
-	globalTasksChanel chan TaskWithChannel[In, Out]
-	globalStopChannel chan struct{}
 }
 
 // создаём один входящий канал для задач и запускаем воркеров

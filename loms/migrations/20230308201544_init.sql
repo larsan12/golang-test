@@ -13,7 +13,9 @@ CREATE TYPE order_status AS ENUM ('new', 'awaiting payment', 'failed', 'paid', '
 CREATE TABLE IF NOT EXISTS public.orders (
     order_id BIGSERIAL PRIMARY KEY,
     user_id bigint NOT NULL,
-    status order_status NOT NULL
+    status order_status NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TYPE reserve_status AS ENUM ('new', 'paid');
@@ -23,7 +25,8 @@ CREATE TABLE IF NOT EXISTS public.stocks_reservation (
     warehouse_id bigint,
     count integer NOT NULL,
     status reserve_status default 'new',
-    CONSTRAINT stocks_reservation_pk PRIMARY KEY (order_id, sku, warehouse_id)
+    CONSTRAINT stocks_reservation_pk PRIMARY KEY (order_id, sku, warehouse_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 
