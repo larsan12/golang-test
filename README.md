@@ -28,6 +28,9 @@ services:
   product: "route256.pavl.uk:8082"
 port: "50051"
 db: "postgres://user:password@checkout-pgbouncer:6433/checkout"
+productServiceRateLiming: 10
+getProductPoolAmount: 5
+
 ```
 
 ## loms config
@@ -35,4 +38,5 @@ db: "postgres://user:password@checkout-pgbouncer:6433/checkout"
 ```
 port: "50052"
 db: "postgres://user:password@loms-pgbouncer:6432/loms"
+OrderExpirationTime: 10
 ```

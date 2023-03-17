@@ -57,7 +57,7 @@ func main() {
 	desc.RegisterLomsV1Server(server, loms_v1.NewLomsV1(businessLogic))
 
 	// run observers
-	businessLogic.ObserveOldOrders(context.Background())
+	businessLogic.ObserveOldOrders(context.Background(), config.ConfigData.OrderExpirationTime)
 
 	log.Printf("grpc server listening at %v port", config.ConfigData.Port)
 	if err = server.Serve(lis); err != nil {

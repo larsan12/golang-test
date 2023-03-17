@@ -8,8 +8,9 @@ import (
 )
 
 type ConfigStruct struct {
-	Port string `yaml:"port"`
-	Db string `yaml:"db"`
+	Port                string `yaml:"port"`
+	Db                  string `yaml:"db"`
+	OrderExpirationTime int    `yaml:"orderExpirationTime"`
 }
 
 var ConfigData ConfigStruct

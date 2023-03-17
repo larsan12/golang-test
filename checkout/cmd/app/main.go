@@ -43,7 +43,7 @@ func main() {
 	repo := repository.NewCartRepo(transactionManager)
 
 	// ratelimits
-	productServiceLimiter := ratelimiter.NewLimiter(10, 10)
+	productServiceLimiter := ratelimiter.NewLimiter(config.ConfigData.ProductServiceRateLiming, config.ConfigData.ProductServiceRateLiming)
 	defer productServiceLimiter.Close()
 
 	// loms client
@@ -64,7 +64,7 @@ func main() {
 
 	// pools init
 	// глобальный пул для запросов к продукт сервису, вне зависимости от колличества запросов к серверу - всегда будет не более 5 паралельных запросов к продукт сервису
-	getProductPool := workerpool.NewPool[uint32, domain.Product](context.Background(), 5)
+	getProductPool := workerpool.NewPool[uint32, domain.Product](context.Background(), config.ConfigData.GetProductPoolAmount)
 	defer getProductPool.Close()
 
 	// services init

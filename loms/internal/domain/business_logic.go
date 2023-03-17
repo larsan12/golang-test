@@ -10,5 +10,5 @@ type BusinessLogic interface {
 	ListOrder(ctx context.Context, orderId int64) (Order, error)
 	OrderPayed(ctx context.Context, orderId int64) error
 	Stock(ctx context.Context, sku uint32) ([]StockItem, error)
-	ObserveOldOrders(ctx context.Context)
+	ObserveOldOrders(ctx context.Context, orderExpirationTime int)
 }

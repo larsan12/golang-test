@@ -9,16 +9,18 @@ import (
 
 var isRunning bool = false
 
-func (m *Model) ObserveOldOrders(ctx context.Context) {
+const observationPeriod int = 10 // in minutes
+
+func (m *Model) ObserveOldOrders(ctx context.Context, orderExpirationTime int) {
 	if isRunning {
 		return
 	}
 
 	go func() {
 		// тикер каждые 10 минут
-		for range time.Tick(10 * time.Minute) {
+		for range time.Tick(time.Duration(observationPeriod) * time.Minute) {
 			// берём заказы старше 10 минут
-			orders, err := m.repository.GetOldOrders(ctx, time.Now().Add(-10*time.Minute))
+			orders, err := m.repository.GetOldOrders(ctx, time.Now().Add(-time.Duration(orderExpirationTime)*time.Minute))
 			if err != nil {
 				fmt.Println("Clean all orders, undexpected error: ", err)
 				continue
