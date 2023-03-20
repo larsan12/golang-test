@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"route256/libs/workerpool"
 	"route256/loms/config"
 	loms_v1 "route256/loms/internal/api/v1"
 	"route256/loms/internal/domain"
@@ -34,8 +35,12 @@ func main() {
 	// init db repository
 	transactionManager := transactor.NewTransactionManager(pool)
 	repo := repository.NewLomsRepo(transactionManager)
-	
-	businessLogic := domain.New(repo, transactionManager)
+
+	// worker pools init
+	orderCleanerWorkerPool := workerpool.NewPool[domain.Order, bool](context.Background(), 5)
+	defer orderCleanerWorkerPool.Close()
+
+	businessLogic := domain.New(repo, transactionManager, orderCleanerWorkerPool)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))
 	if err != nil {
@@ -50,6 +55,10 @@ func main() {
 	)
 	reflection.Register(server)
 	desc.RegisterLomsV1Server(server, loms_v1.NewLomsV1(businessLogic))
+
+	// run observers
+	businessLogic.ObserveOldOrders(context.Background(), config.ConfigData.OrderExpirationTime)
+
 	log.Printf("grpc server listening at %v port", config.ConfigData.Port)
 	if err = server.Serve(lis); err != nil {
 		log.Fatalf("serve error: %v", err)

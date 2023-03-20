@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 )
 
 type Repository interface {
@@ -15,5 +16,5 @@ type Repository interface {
 	ReservSetStatuses(ctx context.Context, orderId int64, status string) error
 	GetOrder(ctx context.Context, orderId int64) (Order, error)
 	GetOrderItems(ctx context.Context, orderId int64) ([]OrderItem, error)
+	GetOldOrders(ctx context.Context, dateFrom time.Time) ([]Order, error)
 }
-

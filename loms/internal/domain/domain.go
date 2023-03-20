@@ -1,16 +1,21 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"route256/libs/workerpool"
+)
 
 type Model struct {
-	repository Repository
-	transactionManager TransactionManager
+	repository             Repository
+	transactionManager     TransactionManager
+	orderCleanerWorkerPool workerpool.WorkerPool[Order, bool]
 }
 
-func New(repository Repository, transactionManager TransactionManager) *Model {
+func New(repository Repository, transactionManager TransactionManager, orderCleanerWorkerPool workerpool.WorkerPool[Order, bool]) *Model {
 	return &Model{
 		repository,
 		transactionManager,
+		orderCleanerWorkerPool,
 	}
 }
 
@@ -24,9 +29,10 @@ type OrderItem struct {
 }
 
 type Order struct {
-	Status string
-	User   int64
-	Items  []OrderItem
+	OrderId int64
+	Status  string
+	User    int64
+	Items   []OrderItem
 }
 
 type StockItem struct {
@@ -35,16 +41,16 @@ type StockItem struct {
 }
 
 type StockReservation struct {
-	OrderId 		int64
-	Sku   			uint32
+	OrderId     int64
+	Sku         uint32
 	WarehouseId int64
-	Count   		uint32
-	Status			string
+	Count       uint32
+	Status      string
 }
 
 const (
-	OrderStatusNew = "new"
-	OrderStatusPaid = "paid"
+	OrderStatusNew      = "new"
+	OrderStatusPaid     = "paid"
 	OrderStatusCanceled = "cancelled"
-	ReserveStatusPaid = "paid"
+	ReserveStatusPaid   = "paid"
 )

@@ -13,8 +13,10 @@ type ConfigStruct struct {
 		Loms    string `yaml:"loms"`
 		Product string `yaml:"product"`
 	} `yaml:"services"`
-	Port string `yaml:"port"`
-	Db string `yaml:"db"`
+	Port                     string `yaml:"port"`
+	Db                       string `yaml:"db"`
+	ProductServiceRateLiming uint   `yaml:"productServiceRateLiming"`
+	GetProductPoolAmount     int    `yaml:"getProductPoolAmount"`
 }
 
 var ConfigData ConfigStruct

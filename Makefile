@@ -14,14 +14,20 @@ precommit:
 	cd notifications && make precommit
 
 up-loms-db:
-	sudo docker compose up -d loms-db --force-recreate --build
-	sudo docker compose up -d loms-pgbouncer --force-recreate --build
+	sudo docker compose up -d loms-db --build
+	sudo docker compose up -d loms-pgbouncer --build
 
 up-checkout-db:
-	sudo docker compose up -d checkout-db --force-recreate --build
-	sudo docker compose up -d checkout-pgbouncer --force-recreate --build
+	sudo docker compose up -d checkout-db --build
+	sudo docker compose up -d checkout-pgbouncer --build
 
 up-db: up-loms-db up-checkout-db
+
+run-loms:
+	sudo docker compose up -d loms --force-recreate --build
+
+run-checkout:
+	sudo docker compose up -d checkout --force-recreate --build
 
 down: 
 	sudo docker compose down

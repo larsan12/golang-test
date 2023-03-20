@@ -3,9 +3,7 @@ package domain
 import (
 	"context"
 	"log"
-	"strconv"
-
-	"github.com/pkg/errors"
+	"route256/libs/workerpool"
 )
 
 func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
@@ -16,16 +14,41 @@ func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
 	}
 	items := make([]CartItem, 0, len(repoItems))
 
-	for _, item := range repoItems {
-		info, err := m.GetProduct(ctx, item.Sku)
-		if err != nil {
-			return items, errors.Wrap(err, "[service ListCart] getProduct error, sku: "+strconv.Itoa(int(item.Sku)))
+	// create task
+	getProduct := func(sku uint32) (Product, error) {
+		return m.GetProduct(ctx, sku)
+	}
+
+	// create tasks
+	tasks := make([]workerpool.Task[uint32, Product], len(repoItems))
+	for i, item := range repoItems {
+		tasks[i] = workerpool.Task[uint32, Product]{
+			Run:    getProduct,
+			InArgs: item.Sku,
 		}
+	}
+
+	// execute in pool
+	products, err := m.getProductPool.Execute(ctx, tasks)
+
+	// check error
+	if err != nil {
+		return nil, err
+	}
+
+	// create map sku:product
+	productcsMap := make(map[uint32]Product, len(products))
+	for _, product := range products {
+		productcsMap[product.Sku] = product
+	}
+
+	// map items
+	for _, item := range repoItems {
 		items = append(items, CartItem{
 			Sku:   item.Sku,
 			Count: item.Count,
-			Name:  info.Name,
-			Price: info.Price,
+			Name:  productcsMap[item.Sku].Name,
+			Price: productcsMap[item.Sku].Price,
 		})
 	}
 	log.Printf("[service ListCart] items: %+v", items)

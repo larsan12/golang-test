@@ -4,3 +4,5 @@ services:
   product: "route256.pavl.uk:8082"
 port: "50051"
 db: "postgres://user:password@checkout-pgbouncer:6433/checkout"
+productServiceRateLiming: 10
+getProductPoolAmount: 5
