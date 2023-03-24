@@ -62,7 +62,7 @@ vendor-proto:
 		rm -rf vendor-proto/protobuf ;\
 	fi
 
-generate:
+generate-grpc:
 	mkdir -p pkg/checkout_v1
 	mkdir -p pkg/product_v1
 	mkdir -p pkg/loms_v1
@@ -73,6 +73,9 @@ generate:
 	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc \
 	api/checkout/v1/checkout-service.proto
 
+generate-mocks:
+	go generate ./...
+	
 migration-create:
 	goose -dir ./migrations create $(name) sql
 

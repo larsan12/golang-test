@@ -5,6 +5,12 @@ import (
 	"route256/libs/workerpool"
 )
 
+//go:generate sh -c "rm -rf mocks && mkdir -p mocks"
+//go:generate minimock -i LomsClient -o ./mocks/ -s "_minimock.go"
+//go:generate minimock -i ProductServiceClient -o ./mocks/ -s "_minimock.go"
+//go:generate minimock -i Repository -o ./mocks/ -s "_minimock.go"
+//go:generate minimock -i TransactionManager -o ./mocks/ -s "_minimock.go"
+
 type LomsClient interface {
 	Stocks(ctx context.Context, sku uint32) ([]Stock, error)
 	CreateOrder(ctx context.Context, user int64, items []OrderItem) (int64, error)
