@@ -1,3 +1,5 @@
+LOMS_MIGRATION_DSN = "postgres://user:password@localhost:6432/loms?sslmode=disable"
+CHECKOUT_MIGRATION_DSN = "postgres://user:password@localhost:6433/checkout?sslmode=disable"
 
 build-all:
 	cd checkout && GOOS=linux make build
@@ -34,3 +36,11 @@ down:
 
 clean-volumes:
 	sudo docker compose down --volumes
+
+loms-migrate:
+	goose -dir ./loms/migrations postgres ${LOMS_MIGRATION_DSN} up
+
+checkout-migrate:
+	goose -dir ./checkout/migrations postgres ${CHECKOUT_MIGRATION_DSN} up
+
+migrate: loms-migrate checkout-migrate
