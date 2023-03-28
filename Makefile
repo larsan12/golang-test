@@ -44,3 +44,7 @@ checkout-migrate:
 	goose -dir ./checkout/migrations postgres ${CHECKOUT_MIGRATION_DSN} up
 
 migrate: loms-migrate checkout-migrate
+
+up-kafka:
+	sudo docker compose up -d zookeeper
+	sudo docker compose up -d kafka

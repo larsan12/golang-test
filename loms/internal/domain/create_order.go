@@ -13,17 +13,23 @@ func (m *Model) CreateOrder(ctx context.Context, user int64, items []OrderItem) 
 		if err != nil {
 			return err
 		}
+
+		m.logsSender.SendOrderStatusAsync(Order{
+			OrderId: orderId,
+			Status:  OrderStatusNew,
+		})
+
 		for _, item := range items {
 			stocks, err := m.repository.GetStocks(ctxTX, item.Sku)
 			if err != nil {
-				return err;
+				return err
 			}
 			restCount := item.Count
 			for _, stock := range stocks {
 				var reservation StockReservation = StockReservation{
-					OrderId: orderId,
+					OrderId:     orderId,
 					WarehouseId: stock.WarehouseID,
-					Sku: item.Sku,
+					Sku:         item.Sku,
 				}
 				reservation.WarehouseId = stock.WarehouseID
 				if stock.Count >= uint64(restCount) {
@@ -43,7 +49,7 @@ func (m *Model) CreateOrder(ctx context.Context, user int64, items []OrderItem) 
 					return err
 				}
 				if restCount == 0 {
-					break;
+					break
 				}
 			}
 			if restCount != 0 {

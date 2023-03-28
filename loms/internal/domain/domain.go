@@ -9,13 +9,19 @@ type Model struct {
 	repository             Repository
 	transactionManager     TransactionManager
 	orderCleanerWorkerPool workerpool.WorkerPool[Order, bool]
+	logsSender             LogsSender
 }
 
-func New(repository Repository, transactionManager TransactionManager, orderCleanerWorkerPool workerpool.WorkerPool[Order, bool]) *Model {
+type LogsSender interface {
+	SendOrderStatusAsync(order Order)
+}
+
+func New(repository Repository, transactionManager TransactionManager, orderCleanerWorkerPool workerpool.WorkerPool[Order, bool], logsSender LogsSender) *Model {
 	return &Model{
 		repository,
 		transactionManager,
 		orderCleanerWorkerPool,
+		logsSender,
 	}
 }
 
@@ -29,10 +35,10 @@ type OrderItem struct {
 }
 
 type Order struct {
-	OrderId int64
+	OrderId int64 `json:"id"`
 	Status  string
-	User    int64
-	Items   []OrderItem
+	User    int64       `json:"-"`
+	Items   []OrderItem `json:"-"`
 }
 
 type StockItem struct {

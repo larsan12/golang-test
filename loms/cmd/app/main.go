@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"route256/libs/kafka"
 	"route256/libs/workerpool"
 	"route256/loms/config"
 	loms_v1 "route256/loms/internal/api/v1"
@@ -36,11 +37,19 @@ func main() {
 	transactionManager := transactor.NewTransactionManager(pool)
 	repo := repository.NewLomsRepo(transactionManager)
 
+	// init kafka
+	asyncProducer, err := kafka.NewAsyncProducer(config.ConfigData.KafkaBrokers)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	logsSender := domain.NewOrderLogSender(asyncProducer, config.ConfigData.KafkaTopic, func(id string) {}, func(id string) {})
+
 	// worker pools init
 	orderCleanerWorkerPool := workerpool.NewPool[domain.Order, bool](context.Background(), 5)
 	defer orderCleanerWorkerPool.Close()
 
-	businessLogic := domain.New(repo, transactionManager, orderCleanerWorkerPool)
+	businessLogic := domain.New(repo, transactionManager, orderCleanerWorkerPool, logsSender)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))
 	if err != nil {

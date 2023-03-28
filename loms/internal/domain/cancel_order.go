@@ -10,6 +10,12 @@ func (m *Model) CancelOrder(ctx context.Context, orderId int64) error {
 		if err != nil {
 			return err
 		}
+
+		m.logsSender.SendOrderStatusAsync(Order{
+			OrderId: orderId,
+			Status:  OrderStatusCanceled,
+		})
+
 		reservations, err := m.repository.GetStockReservations(ctxTX, orderId)
 		if err != nil {
 			return err

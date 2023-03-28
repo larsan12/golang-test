@@ -8,11 +8,8 @@ import (
 )
 
 type ConfigStruct struct {
-	Port                string   `yaml:"port"`
-	Db                  string   `yaml:"db"`
-	OrderExpirationTime int      `yaml:"orderExpirationTime"`
-	KafkaBrokers        []string `yaml:"kafkaBrokers"`
-	KafkaTopic          string   `yaml:"kafkaTopic"`
+	KafkaBrokers []string `yaml:"kafkaBrokers"`
+	KafkaTopic   string   `yaml:"kafkaTopic"`
 }
 
 var ConfigData ConfigStruct

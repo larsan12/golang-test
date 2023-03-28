@@ -1,3 +1,6 @@
 port: "50052"
 db: "postgres://user:password@loms-pgbouncer:6432/loms"
 OrderExpirationTime: 10
+kafkaBrokers:
+  - "127.0.0.1:29092"
+kafkaTopic: "test"
