@@ -10,6 +10,12 @@ func (m *Model) OrderPayed(ctx context.Context, orderId int64) error {
 		if err != nil {
 			return err
 		}
+
+		m.logsSender.SendOrderStatusAsync(Order{
+			OrderId: orderId,
+			Status:  OrderStatusPaid,
+		})
+
 		err = m.repository.ReservSetStatuses(ctxTX, orderId, ReserveStatusPaid)
 		if err != nil {
 			return err
