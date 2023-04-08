@@ -2,9 +2,9 @@ package domain
 
 import (
 	"context"
-	"log"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 func (m *Model) Puchase(ctx context.Context, user int64) (int64, error) {
@@ -14,7 +14,7 @@ func (m *Model) Puchase(ctx context.Context, user int64) (int64, error) {
 	if err != nil {
 		return order, errors.Wrap(err, "[service puchase] ListCart error")
 	}
-	log.Printf("[service puchase] cartItems: %+v", cartItems)
+	m.log.Info("[service puchase]", zap.Any("cartItems", cartItems))
 
 	orderItems := make([]OrderItem, 0, len(cartItems))
 
@@ -25,7 +25,7 @@ func (m *Model) Puchase(ctx context.Context, user int64) (int64, error) {
 		})
 	}
 
-	log.Printf("[service puchase] orderItems: %+v", orderItems)
+	m.log.Info("[service puchase]", zap.Any("orderItems", orderItems))
 
 	// TODO
 	order, err = m.CreateOrder(ctx, user, orderItems)
@@ -34,7 +34,7 @@ func (m *Model) Puchase(ctx context.Context, user int64) (int64, error) {
 	}
 
 	m.repository.DeleteCart(ctx, user)
-	log.Printf("[service] success puchase, orderId: %d", order)
+	m.log.Info("[service] success puchase, orderId: %d", zap.Int64("orderId", order))
 
 	return order, err
 }

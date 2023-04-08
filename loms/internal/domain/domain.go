@@ -3,9 +3,12 @@ package domain
 import (
 	"context"
 	"route256/libs/workerpool"
+
+	"go.uber.org/zap"
 )
 
 type Model struct {
+	log                    *zap.Logger
 	repository             Repository
 	transactionManager     TransactionManager
 	orderCleanerWorkerPool workerpool.WorkerPool[Order, bool]
@@ -16,8 +19,10 @@ type LogsSender interface {
 	SendOrderStatusAsync(order Order)
 }
 
-func New(repository Repository, transactionManager TransactionManager, orderCleanerWorkerPool workerpool.WorkerPool[Order, bool], logsSender LogsSender) *Model {
+func New(
+	log *zap.Logger, repository Repository, transactionManager TransactionManager, orderCleanerWorkerPool workerpool.WorkerPool[Order, bool], logsSender LogsSender) *Model {
 	return &Model{
+		log,
 		repository,
 		transactionManager,
 		orderCleanerWorkerPool,

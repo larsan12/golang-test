@@ -13,6 +13,7 @@ type ConfigStruct struct {
 	OrderExpirationTime int      `yaml:"orderExpirationTime"`
 	KafkaBrokers        []string `yaml:"kafkaBrokers"`
 	KafkaTopic          string   `yaml:"kafkaTopic"`
+	TracesUrl           string   `yaml:"tracesUrl"`
 }
 
 var ConfigData ConfigStruct

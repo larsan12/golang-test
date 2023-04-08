@@ -3,10 +3,10 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/Shopify/sarama"
+	"go.uber.org/zap"
 )
 
 type logsSender struct {
@@ -16,7 +16,7 @@ type logsSender struct {
 
 type Handler func(id string)
 
-func NewOrderLogSender(producer sarama.AsyncProducer, topic string, onSuccess, onFailed Handler) *logsSender {
+func NewOrderLogSender(log *zap.Logger, producer sarama.AsyncProducer, topic string, onSuccess, onFailed Handler) *logsSender {
 	s := &logsSender{
 		asyncProducer: producer,
 		topic:         topic,
@@ -38,7 +38,7 @@ func NewOrderLogSender(producer sarama.AsyncProducer, topic string, onSuccess, o
 			bytes, _ := m.Key.Encode()
 
 			onSuccess(string(bytes))
-			log.Printf("order id: %s, partition: %d, offset: %d", string(bytes), m.Partition, m.Offset)
+			log.Info("log sended", zap.String("value", string(bytes)), zap.Int32("partition", m.Partition), zap.Int64("offset", m.Offset))
 		}
 	}()
 
