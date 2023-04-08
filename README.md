@@ -18,10 +18,7 @@ jaeger http://localhost:16686/search
 ## how to run:
 
 ```
-make up-db
-make run-services
-cd loms && make migration-run
-cd checkout && make migration-run
+make run-all
 ```
 
 ## checkout config
