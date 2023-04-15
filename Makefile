@@ -6,7 +6,7 @@ build-all:
 	cd loms && GOOS=linux make build
 	cd notifications && GOOS=linux make build
 
-run-services: build-all
+run-services: build-all migrate
 	sudo docker compose up -d loms --force-recreate --build
 	sudo docker compose up -d checkout --force-recreate --build
 
@@ -48,3 +48,12 @@ migrate: loms-migrate checkout-migrate
 up-kafka:
 	sudo docker compose up -d zookeeper
 	sudo docker compose up -d kafka
+
+up-metrics:
+	sudo docker compose up -d prometheus --build
+	sudo docker compose up -d grafana --build
+	sudo docker compose up -d jaeger --build
+
+run-all: build-all
+	sudo docker compose up -d --force-recreate --build
+	make migrate

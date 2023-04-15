@@ -3,6 +3,8 @@ package domain
 import (
 	"context"
 	"route256/libs/workerpool"
+
+	"go.uber.org/zap"
 )
 
 //go:generate sh -c "rm -rf mocks && mkdir -p mocks"
@@ -25,6 +27,7 @@ type TransactionManager interface {
 }
 
 type Model struct {
+	log                  *zap.Logger
 	lomsClient           LomsClient
 	productServiceClient ProductServiceClient
 	repository           Repository
@@ -34,6 +37,7 @@ type Model struct {
 }
 
 func New(
+	log *zap.Logger,
 	lomsClient LomsClient,
 	productServiceClient ProductServiceClient,
 	repository Repository,
@@ -41,6 +45,7 @@ func New(
 	getProductPool workerpool.WorkerPool[uint32, Product],
 ) *Model {
 	return &Model{
+		log,
 		lomsClient,
 		productServiceClient,
 		repository,

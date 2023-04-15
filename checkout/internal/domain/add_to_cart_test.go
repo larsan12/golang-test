@@ -5,6 +5,7 @@ import (
 	"errors"
 	"route256/checkout/internal/domain"
 	"route256/checkout/internal/domain/mocks"
+	"route256/libs/logger"
 	"route256/libs/workerpool"
 	"testing"
 
@@ -171,9 +172,10 @@ func TestAddToCart(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			log := logger.New(true)
 			getProductPool := workerpool.NewPool[uint32, domain.Product](ctx, 5)
 
-			businessLogic := domain.New(tt.lomsClientMock(mc), tt.productServiceClientMock(mc), tt.repositoryMock(mc), tt.transactionManagerMock(mc), getProductPool)
+			businessLogic := domain.New(log, tt.lomsClientMock(mc), tt.productServiceClientMock(mc), tt.repositoryMock(mc), tt.transactionManagerMock(mc), getProductPool)
 
 			err := businessLogic.AddToCart(tt.args.ctx, tt.args.cartItem)
 			if tt.err != nil {

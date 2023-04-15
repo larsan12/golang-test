@@ -14,14 +14,22 @@ import (
 	repository "route256/checkout/internal/repository/postgres"
 	"route256/checkout/internal/repository/postgres/transactor"
 	desc "route256/checkout/pkg/checkout_v1"
+	"route256/libs/logger"
+	"route256/libs/metrics"
 	"route256/libs/ratelimiter"
 	"route256/libs/workerpool"
 
 	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
+)
+
+var (
+	develMode   = false
+	metricsPort = "8111"
 )
 
 func main() {
@@ -31,10 +39,13 @@ func main() {
 		log.Fatal("config init", err)
 	}
 
+	// logger
+	log := logger.New(develMode)
+
 	// init db pool
 	pool, err := pgxpool.Connect(context.Background(), config.ConfigData.Db)
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+		log.Fatal("Unable to connect to database: %v\n", zap.Error(err))
 	}
 	defer pool.Close()
 
@@ -46,18 +57,31 @@ func main() {
 	productServiceLimiter := ratelimiter.NewLimiter(config.ConfigData.ProductServiceRateLiming, config.ConfigData.ProductServiceRateLiming)
 	defer productServiceLimiter.Close()
 
+	// metrics init
+
+	metrics := metrics.New("checkout", metricsPort, config.ConfigData.TracesUrl, log)
+
 	// loms client
-	lomsConn, err := grpc.Dial(config.ConfigData.Services.Loms, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	lomsConn, err := grpc.Dial(config.ConfigData.Services.Loms,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(metrics.MetricsClientInterceptor("loms_client")),
+		grpc.WithUnaryInterceptor(metrics.TracingClientInterceptor()),
+	)
+
 	if err != nil {
-		log.Fatalf("failed to connect to server: %v", err)
+		log.Fatal("failed to connect to server: %v", zap.Error(err))
 	}
 	defer lomsConn.Close()
 	lomsClient := loms.NewClient(lomsConn)
 
 	// product client
-	productConn, err := grpc.Dial(config.ConfigData.Services.Product, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	productConn, err := grpc.Dial(config.ConfigData.Services.Product,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(metrics.MetricsClientInterceptor("product_client")),
+		grpc.WithUnaryInterceptor(metrics.TracingClientInterceptor()),
+	)
 	if err != nil {
-		log.Fatalf("failed to connect to server: %v", err)
+		log.Fatal("failed to connect to server: %v", zap.Error(err))
 	}
 	defer productConn.Close()
 	productClient := product.NewClient(productConn, config.ConfigData.Token, productServiceLimiter)
@@ -68,24 +92,29 @@ func main() {
 	defer getProductPool.Close()
 
 	// services init
-	businessLogic := domain.New(lomsClient, productClient, repo, transactionManager, getProductPool)
+	businessLogic := domain.New(log, lomsClient, productClient, repo, transactionManager, getProductPool)
 
 	// server init
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", config.ConfigData.Port))
 	if err != nil {
-		log.Fatalf("listenin error: %v", err)
+		log.Fatal("listenin error: %v", zap.Error(err))
 	}
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(
 			grpcMiddleware.ChainUnaryServer(
+				metrics.MetricsServerInterceptor("grpc_server"),
 				interceptors.LoggingInterceptor,
+				metrics.TracingServerInterceptor(),
 			),
 		),
 	)
 	reflection.Register(server)
 	desc.RegisterCheckoutV1Server(server, checkout_v1.NewCheckoutV1(businessLogic))
-	log.Printf("grpc server listening at %v port", config.ConfigData.Port)
+	log.Info("grpc server listening", zap.String("port", config.ConfigData.Port))
+	// metrics run http
+	go metrics.Listen()
+
 	if err = server.Serve(lis); err != nil {
-		log.Fatalf("serve error: %v", err)
+		log.Fatal("serve error: %v", zap.Error(err))
 	}
 }

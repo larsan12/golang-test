@@ -10,13 +10,15 @@
 - должны успешно проходить make precommit и make run-all в корневой папке
 - Наладить общение с product-service (в хендлере Checkout.listCart). Токен для общения с product-service получить, написав в личку @pav5000
 
+## urls
+
+grafana http://localhost:3000/
+jaeger http://localhost:16686/search
+
 ## how to run:
 
 ```
-make up-db
-make run-services
-cd loms && make migration-run
-cd checkout && make migration-run
+make run-all
 ```
 
 ## checkout config
@@ -30,6 +32,10 @@ port: "50051"
 db: "postgres://user:password@checkout-pgbouncer:6433/checkout"
 productServiceRateLiming: 10
 getProductPoolAmount: 5
+kafkaBrokers:
+  - "kafka:29092"
+kafkaTopic: "test"
+tracesUrl: "http://localhost:14268/api/traces"
 
 ```
 
@@ -39,4 +45,8 @@ getProductPoolAmount: 5
 port: "50052"
 db: "postgres://user:password@loms-pgbouncer:6432/loms"
 OrderExpirationTime: 10
+kafkaBrokers:
+  - "kafka:29092"
+kafkaTopic: "test"
+tracesUrl: "http://localhost:14268/api/traces"
 ```

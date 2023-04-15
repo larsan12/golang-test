@@ -2,13 +2,13 @@ package domain
 
 import (
 	"context"
-	"log"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 var (
-	ErrInsufficientStocks = errors.New("insufficient stocks")
+	ErrInsufficientStocks  = errors.New("insufficient stocks")
 	ErrAddToCartRepository = errors.New("repository.AddToCart error")
 )
 
@@ -32,12 +32,12 @@ func (m *Model) AddToCart(ctx context.Context, cartItem CartItemDiff) error {
 					}
 					return err
 				} else {
-					return m.repository.UpdateCartItemCount(ctxTX, cartItem, item.Count + cartItem.Count)
+					return m.repository.UpdateCartItemCount(ctxTX, cartItem, item.Count+cartItem.Count)
 				}
 			})
 
 			if err != nil {
-				log.Printf("failed repository.AddToCart: %v", err)
+				m.log.Info("failed repository.AddToCart: %v", zap.Error(err))
 				return ErrAddToCartRepository
 			}
 			return nil

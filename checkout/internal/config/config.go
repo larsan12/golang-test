@@ -17,6 +17,7 @@ type ConfigStruct struct {
 	Db                       string `yaml:"db"`
 	ProductServiceRateLiming uint   `yaml:"productServiceRateLiming"`
 	GetProductPoolAmount     int    `yaml:"getProductPoolAmount"`
+	TracesUrl                string `yaml:"tracesUrl"`
 }
 
 var ConfigData ConfigStruct

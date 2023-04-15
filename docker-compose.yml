@@ -8,7 +8,6 @@ services:
   notifications:
     image: notifications
     build: ./notifications/
-    ports:
     depends_on:
       - kafka
 
@@ -17,16 +16,24 @@ services:
     build: ./checkout/
     ports:
       - "50051:50051"
+      - "8111:8111"
     depends_on:
       - checkout-pgbouncer
+      - jaeger
 
   loms:
     image: loms
+    depends_on:
+      loms-pgbouncer:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
     build: ./loms/
     ports:
       - "50052:50052"
-    depends_on:
-      - loms-pgbouncer
+      - "8112:8112"
 
   loms-db:
     image: postgres:15.1
@@ -37,6 +44,12 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_DB=loms
     container_name: "loms-db-container"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d loms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   loms-pgbouncer:
     image: docker.io/bitnami/pgbouncer:1
@@ -49,7 +62,8 @@ services:
       - PGBOUNCER_DATABASE=loms
       - POSTGRESQL_HOST=loms-db
     depends_on:
-      - loms-db
+      loms-db:
+        condition: service_healthy
 
   checkout-db:
     image: postgres:15.1
@@ -60,6 +74,12 @@ services:
       - POSTGRES_USER=user
       - POSTGRES_DB=checkout
     container_name: "checkout-db-container"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d checkout"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   checkout-pgbouncer:
     image: docker.io/bitnami/pgbouncer:1
@@ -73,20 +93,24 @@ services:
       - POSTGRESQL_HOST=checkout-db
       - PGBOUNCER_PORT=6433
     depends_on:
-      - checkout-db
+      checkout-db:
+        condition: service_healthy
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: echo stat | nc localhost 2181
+      interval: 10s
+      timeout: 10s
+      retries: 3
     ports:
       - 22181:2181
 
   kafka:
     image: confluentinc/cp-kafka:latest
-    depends_on:
-      - zookeeper
     ports:
       - 29092:29092
     environment:
@@ -96,13 +120,48 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts.yml:/etc/prometheus/alerts.yml
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  grafana:
+    image: grafana/grafana-oss
+    user: "$UID:$GID"
+    ports:
+      - 3000:3000
+    volumes:
+      - ./data:/var/lib/grafana
+    links:
+      - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.18
+    ports:
+      - 5775:5775/udp
+      - 6831:6831/udp
+      - 6832:6832/udp
+      - 5778:5778
+      - 16686:16686 # web
+      - 14268:14268
+      - 9411:9411
 
 volumes:
   loms_data:
   checkout_data:
   pg_data:
-# notification:
-#   image: notification
-#   build: ./notification
-#   ports:
-#     - "8082:8082"

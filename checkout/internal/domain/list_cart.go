@@ -2,8 +2,9 @@ package domain
 
 import (
 	"context"
-	"log"
 	"route256/libs/workerpool"
+
+	"go.uber.org/zap"
 )
 
 func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
@@ -51,7 +52,7 @@ func (m *Model) ListCart(ctx context.Context, user int64) ([]CartItem, error) {
 			Price: productcsMap[item.Sku].Price,
 		})
 	}
-	log.Printf("[service ListCart] items: %+v", items)
+	m.log.Info("[service ListCart] items: %+v", zap.Any("items", items))
 
 	return items, nil
 }

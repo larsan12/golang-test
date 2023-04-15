@@ -5,6 +5,7 @@ import (
 	"errors"
 	"route256/checkout/internal/domain"
 	"route256/checkout/internal/domain/mocks"
+	"route256/libs/logger"
 	"route256/libs/workerpool"
 	"testing"
 
@@ -164,9 +165,10 @@ func TestListCart(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			log := logger.New(true)
 			getProductPool := workerpool.NewPool[uint32, domain.Product](ctx, 5)
 
-			businessLogic := domain.New(tt.lomsClientMock(mc), tt.productServiceClientMock(mc), tt.repositoryMock(mc), tt.transactionManagerMock(mc), getProductPool)
+			businessLogic := domain.New(log, tt.lomsClientMock(mc), tt.productServiceClientMock(mc), tt.repositoryMock(mc), tt.transactionManagerMock(mc), getProductPool)
 
 			res, err := businessLogic.ListCart(tt.args.ctx, tt.args.user)
 			require.Equal(t, tt.want, res)
