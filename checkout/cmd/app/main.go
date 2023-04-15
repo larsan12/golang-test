@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	checkout_v1 "route256/checkout/internal/api/v1"
+	"route256/checkout/internal/cache"
 	"route256/checkout/internal/clients/grpc/loms"
 	"route256/checkout/internal/clients/grpc/product"
 	"route256/checkout/internal/config"
@@ -28,8 +29,9 @@ import (
 )
 
 var (
-	develMode   = false
-	metricsPort = "8111"
+	develMode       = false
+	metricsPort     = "8111"
+	productCacheTtl = 30_000
 )
 
 func main() {
@@ -74,6 +76,9 @@ func main() {
 	defer lomsConn.Close()
 	lomsClient := loms.NewClient(lomsConn)
 
+	// product cache
+	cache := cache.Create[domain.Product](productCacheTtl)
+
 	// product client
 	productConn, err := grpc.Dial(config.ConfigData.Services.Product,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -84,7 +89,7 @@ func main() {
 		log.Fatal("failed to connect to server: %v", zap.Error(err))
 	}
 	defer productConn.Close()
-	productClient := product.NewClient(productConn, config.ConfigData.Token, productServiceLimiter)
+	productClient := product.NewClient(productConn, config.ConfigData.Token, productServiceLimiter, cache)
 
 	// pools init
 	// глобальный пул для запросов к продукт сервису, вне зависимости от колличества запросов к серверу - всегда будет не более 5 паралельных запросов к продукт сервису
