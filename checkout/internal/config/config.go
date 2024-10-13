@@ -1,9 +1,13 @@
 package config
 
 import (
+	"log"
 	"os"
 
+	_ "embed"
+
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,8 +26,29 @@ type ConfigStruct struct {
 
 var ConfigData ConfigStruct
 
+func init() {
+	// config init
+	err := Init()
+	if err != nil {
+		log.Fatal("Unable to connect init config", zap.Error(err))
+	}
+}
+
+//go:embed config.yml
+var TestConfig string
+
 func Init() error {
-	rawYAML, err := os.ReadFile("config.yml")
+	isTest, exists := os.LookupEnv("IS_TEST")
+
+	if exists && isTest == "true" {
+		err := yaml.Unmarshal([]byte(TestConfig), &ConfigData)
+		if err != nil {
+			return errors.WithMessage(err, "parsing yaml")
+		}
+		return nil
+	}
+
+	rawYAML, err := os.ReadFile("./config.yml")
 	if err != nil {
 		return errors.WithMessage(err, "reading config file")
 	}
