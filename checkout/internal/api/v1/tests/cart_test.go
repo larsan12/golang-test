@@ -1,30 +1,53 @@
-package tests
+package tt
 
 import (
 	"context"
 	checkout "route256/checkout/pkg/checkout_v1"
-	"route256/checkout/tests"
+	tt "route256/checkout/tests"
+	loms "route256/loms/pkg/loms_v1"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
-	tests.Init(m)
+	tt.Init(m)
 }
 
 func TestGrpc(t *testing.T) {
-	t.Run("Add to cart - success", func(t *testing.T) {
-		var items = []*checkout.AddToCartRequest{{User: 4, Sku: 1148162, Count: 10}, {User: 4, Sku: 1076963, Count: 5}}
+	t.Run("Checkout flow - success", tt.Run(func(t *testing.T) {
+		userId := int64(4)
+		var items = []*checkout.AddToCartRequest{{User: userId, Sku: 1148162, Count: 10}, {User: userId, Sku: 1076963, Count: 5}}
+
+		// mock external calls
+
+		tt.LomsClient.EXPECT().
+			Stocks(gomock.Any(), &loms.StocksRequest{Sku: int32(items[0].Sku)}).
+			Return(&loms.StocksResponse{Stocks: []*loms.StockItem{{WarehouseId: 1, Count: 40}}}, nil)
+
+		tt.LomsClient.EXPECT().
+			Stocks(gomock.Any(), &loms.StocksRequest{Sku: int32(items[1].Sku)}).
+			Return(&loms.StocksResponse{Stocks: []*loms.StockItem{{WarehouseId: 1, Count: 40}}}, nil)
+
+		tt.LomsClient.EXPECT().
+			CreateOrder(gomock.Any(), &loms.CreateOrderRequest{User: userId, Items: []*loms.OrderItem{{Sku: items[0].Sku, Count: items[0].Count}, {Sku: items[1].Sku, Count: items[1].Count}}}).
+			Return(&loms.CreateOrderResponse{OrderId: 10}, nil)
+
+		// add to card
+
 		var err error
-		_, err = tests.Grpc.AddToCart(context.Background(), items[0])
+
+		_, err = tt.Grpc.AddToCart(context.Background(), items[0])
 		require.NoError(t, err)
-		_, err = tests.Grpc.AddToCart(context.Background(), items[1])
+		_, err = tt.Grpc.AddToCart(context.Background(), items[1])
 		require.NoError(t, err)
 
+		// list card
+
 		var cart *checkout.ListCartResponse
-		cart, err = tests.Grpc.ListCart(context.Background(), &checkout.ListCartRequest{User: 4})
+		cart, err = tt.Grpc.ListCart(context.Background(), &checkout.ListCartRequest{User: userId})
 		require.NoError(t, err)
 
 		for _, item := range cart.Items {
@@ -34,5 +57,15 @@ func TestGrpc(t *testing.T) {
 			require.Equal(t, ok, true)
 			require.Equal(t, obj.Count, item.Count)
 		}
-	})
+
+		// purchase
+
+		_, err = tt.Grpc.Puchase(context.Background(), &checkout.PuchaseRequest{User: userId})
+		require.NoError(t, err)
+
+		cart, err = tt.Grpc.ListCart(context.Background(), &checkout.ListCartRequest{User: userId})
+		require.NoError(t, err)
+		require.Equal(t, len(cart.Items), 0)
+
+	}))
 }

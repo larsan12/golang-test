@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"log"
 	checkout_v1 "route256/checkout/internal/api/v1"
 	"route256/checkout/internal/cache"
 	"route256/checkout/internal/clients/grpc/loms"
@@ -16,6 +15,8 @@ import (
 	"route256/libs/metrics"
 	"route256/libs/ratelimiter"
 	"route256/libs/workerpool"
+
+	lomsServiceAPI "route256/loms/pkg/loms_v1"
 
 	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -31,24 +32,18 @@ var (
 type Externals struct {
 	Log         *zap.Logger
 	Metrics     *metrics.InterceptorsMetricsFactory
-	LomsConn    *grpc.ClientConn
+	LomsClient  lomsServiceAPI.LomsV1Client
 	ProductConn *grpc.ClientConn
+	PgPool      *pgxpool.Pool
 }
 
 func Server(externals Externals) (*grpc.Server, func()) {
-	// init db pool
-	pool, err := pgxpool.Connect(context.Background(), config.ConfigData.Db)
-	if err != nil {
-		log.Fatal("Unable to connect to database", zap.Error(err))
-	}
-
 	// init db repository
-	transactionManager := transactor.NewTransactionManager(pool)
+	transactionManager := transactor.NewTransactionManager(externals.PgPool)
 	repo := repository.NewCartRepo(transactionManager)
 
 	// ratelimits
 	productServiceLimiter := ratelimiter.NewLimiter(config.ConfigData.ProductServiceRateLiming, config.ConfigData.ProductServiceRateLiming)
-	defer productServiceLimiter.Close()
 
 	metrics := externals.Metrics
 
@@ -56,7 +51,7 @@ func Server(externals Externals) (*grpc.Server, func()) {
 	cache := cache.Create[domain.Product](productCacheTtl)
 
 	// loms client
-	lomsClient := loms.NewClient(externals.LomsConn)
+	lomsClient := loms.NewClient(externals.LomsClient)
 
 	// product client
 	productClient := product.NewClient(externals.ProductConn, config.ConfigData.Token, productServiceLimiter, cache)
@@ -84,6 +79,6 @@ func Server(externals Externals) (*grpc.Server, func()) {
 
 	return server, func() {
 		getProductPool.Close()
-		pool.Close()
+		productServiceLimiter.Close()
 	}
 }

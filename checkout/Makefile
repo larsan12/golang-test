@@ -81,3 +81,6 @@ migration-create:
 
 migration-run:
 	sh ./migration.sh
+
+gen-loms-client-mock:
+	mockgen route256/loms/pkg/loms_v1 LomsV1Client > tests/mocks/loms_client_mock.go

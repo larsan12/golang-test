@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"route256/checkout/cmd/server"
@@ -8,6 +9,9 @@ import (
 	"route256/libs/logger"
 	"route256/libs/metrics"
 
+	lomsServiceAPI "route256/loms/pkg/loms_v1"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
@@ -23,6 +27,13 @@ var (
 func main() {
 	// logger
 	log := logger.New(develMode)
+
+	// init db pool
+	pool, err := pgxpool.Connect(context.Background(), config.ConfigData.Db)
+	if err != nil {
+		log.Fatal("Unable to connect to database", zap.Error(err))
+	}
+	defer pool.Close()
 
 	// metrics init
 	metrics := metrics.New("checkout", metricsPort, config.ConfigData.TracesUrl, log)
@@ -56,7 +67,7 @@ func main() {
 	defer productConn.Close()
 
 	// server init
-	server, closeServer := server.Server(server.Externals{Log: log, Metrics: &metrics, LomsConn: lomsConn, ProductConn: productConn})
+	server, closeServer := server.Server(server.Externals{Log: log, Metrics: &metrics, LomsClient: lomsServiceAPI.NewLomsV1Client(lomsConn), ProductConn: productConn, PgPool: pool})
 	defer closeServer()
 
 	if err != nil {

@@ -5,8 +5,6 @@ import (
 	"route256/checkout/internal/domain"
 	lomsServiceAPI "route256/loms/pkg/loms_v1"
 	"time"
-
-	"google.golang.org/grpc"
 )
 
 var _ domain.LomsClient = (*client)(nil)
@@ -17,9 +15,9 @@ type client struct {
 }
 
 // NewClient ...
-func NewClient(cc *grpc.ClientConn) *client {
+func NewClient(cc lomsServiceAPI.LomsV1Client) *client {
 	return &client{
-		lomsClient: lomsServiceAPI.NewLomsV1Client(cc),
+		lomsClient: cc,
 	}
 }
 
