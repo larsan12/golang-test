@@ -3,7 +3,7 @@ services:
   loms: "loms:50052"
   product: "route256.pavl.uk:8082"
 port: "50051"
-db: "postgres://user:password@checkout-pgbouncer:6433/checkout"
+db: "postgres://user:password@checkout:5432/checkout"
 productServiceRateLiming: 10
 getProductPoolAmount: 5
 tracesUrl: "http://jaeger:14268/api/traces"

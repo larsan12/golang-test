@@ -18,13 +18,13 @@ services:
       - "50051:50051"
       - "8111:8111"
     depends_on:
-      - checkout-pgbouncer
+      - checkout-db
       - jaeger
 
   loms:
     image: loms
     depends_on:
-      loms-pgbouncer:
+      loms-db:
         condition: service_started
       kafka:
         condition: service_healthy
@@ -39,6 +39,8 @@ services:
     image: postgres:15.1
     volumes:
       - loms_data:/var/lib/postgresql/loms_data
+    ports:
+      - 5433:5432
     environment:
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=user
@@ -52,21 +54,25 @@ services:
       start_period: 10s
 
   loms-pgbouncer:
-    image: docker.io/bitnami/pgbouncer:1
+    image: pgbouncer/pgbouncer:latest
     ports:
       - 6432:6432
     environment:
-      - POSTGRESQL_USERNAME=user
-      - POSTGRESQL_PASSWORD=password
-      - POSTGRESQL_DATABASE=loms
-      - PGBOUNCER_DATABASE=loms
-      - POSTGRESQL_HOST=loms-db
+      - DATABASES_HOST=loms
+      - DATABASES_PORT=5432
+      - DATABASES_USER=user
+      - DATABASES_PASSWORD=password
+      - DATABASES_DBNAME=loms
+      - ADMIN_USERS=user
+      - AUTH_TYPE=md5
     depends_on:
       loms-db:
         condition: service_healthy
 
   checkout-db:
     image: postgres:15.1
+    ports:
+      - 5432:5432
     volumes:
       - checkout_data:/var/lib/postgresql/checkout_data
     environment:
@@ -82,16 +88,17 @@ services:
       start_period: 10s
 
   checkout-pgbouncer:
-    image: docker.io/bitnami/pgbouncer:1
+    image: pgbouncer/pgbouncer:latest
     ports:
-      - 6433:6433
+      - 6433:6432
     environment:
-      - POSTGRESQL_USERNAME=user
-      - POSTGRESQL_PASSWORD=password
-      - POSTGRESQL_DATABASE=checkout
-      - PGBOUNCER_DATABASE=checkout
-      - POSTGRESQL_HOST=checkout-db
-      - PGBOUNCER_PORT=6433
+      - DATABASES_HOST=checkout
+      - DATABASES_PORT=5432
+      - DATABASES_USER=user
+      - DATABASES_PASSWORD=password
+      - DATABASES_DBNAME=checkout
+      - ADMIN_USERS=user
+      - AUTH_TYPE=md5
     depends_on:
       checkout-db:
         condition: service_healthy

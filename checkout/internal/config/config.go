@@ -3,11 +3,11 @@ package config
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	_ "embed"
 
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,13 +26,13 @@ type ConfigStruct struct {
 
 var ConfigData ConfigStruct
 
-func init() {
-	// config init
-	err := Init()
-	if err != nil {
-		log.Fatal("Unable to connect init config", zap.Error(err))
-	}
-}
+// func init() {
+// 	// config init
+// 	err := Init()
+// 	if err != nil {
+// 		log.Fatal("Unable to connect init config", zap.Error(err))
+// 	}
+// }
 
 //go:embed config.yml
 var TestConfig string
@@ -48,7 +48,41 @@ func Init() error {
 		return nil
 	}
 
-	rawYAML, err := os.ReadFile("./config.yml")
+	wd, err := os.Getwd()
+	if err != nil {
+		return errors.WithMessage(err, "getting working directory")
+	}
+	log.Printf("current working directory: %s", wd)
+
+	// prefer config from checkout directory regardless of CWD
+	resolveFromCheckoutDir := func(start string) (string, bool) {
+		dir := start
+		for {
+			base := filepath.Base(dir)
+			candidate := filepath.Join(dir, "config.yml")
+			if base == "checkout" {
+				if _, statErr := os.Stat(candidate); statErr == nil {
+					return candidate, true
+				}
+			}
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				return "", false
+			}
+			dir = parent
+		}
+	}
+
+	cfgPath, ok := resolveFromCheckoutDir(wd)
+	if !ok {
+		// fallback to local relative path
+		cfgPath = "./config.yml"
+	}
+
+	absConfigPath, _ := filepath.Abs(cfgPath)
+	log.Printf("resolved config path: %s", absConfigPath)
+
+	rawYAML, err := os.ReadFile(cfgPath)
 	if err != nil {
 		return errors.WithMessage(err, "reading config file")
 	}

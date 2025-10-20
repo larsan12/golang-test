@@ -30,11 +30,11 @@ var (
 )
 
 type Externals struct {
-	Log         *zap.Logger
-	Metrics     *metrics.InterceptorsMetricsFactory
-	LomsClient  lomsServiceAPI.LomsV1Client
-	ProductConn *grpc.ClientConn
-	PgPool      *pgxpool.Pool
+	Log           *zap.Logger
+	Metrics       *metrics.InterceptorsMetricsFactory
+	LomsClient    lomsServiceAPI.LomsV1Client
+	ProductClient product.ProductServiceClientInterface
+	PgPool        *pgxpool.Pool
 }
 
 func Server(externals Externals) (*grpc.Server, func()) {
@@ -54,7 +54,7 @@ func Server(externals Externals) (*grpc.Server, func()) {
 	lomsClient := loms.NewClient(externals.LomsClient)
 
 	// product client
-	productClient := product.NewClient(externals.ProductConn, config.ConfigData.Token, productServiceLimiter, cache)
+	productClient := product.NewClient(externals.ProductClient, config.ConfigData.Token, productServiceLimiter, cache)
 
 	// pools init
 	// глобальный пул для запросов к продукт сервису, вне зависимости от колличества запросов к серверу - всегда будет не более 5 паралельных запросов к продукт сервису

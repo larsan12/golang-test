@@ -1,5 +1,7 @@
-LOMS_MIGRATION_DSN = "postgres://user:password@localhost:6432/loms?sslmode=disable"
-CHECKOUT_MIGRATION_DSN = "postgres://user:password@localhost:6433/checkout?sslmode=disable"
+LOMS_MIGRATION_DSN = "postgres://user:password@localhost:5433/loms?sslmode=disable"
+CHECKOUT_MIGRATION_DSN = "postgres://user:password@localhost:5432/checkout?sslmode=disable"
+
+debug: up-db migrate
 
 build-all:
 	cd checkout && GOOS=linux make build
@@ -17,11 +19,9 @@ precommit:
 
 up-loms-db:
 	sudo docker compose up -d loms-db --build
-	sudo docker compose up -d loms-pgbouncer --build
 
 up-checkout-db:
 	sudo docker compose up -d checkout-db --build
-	sudo docker compose up -d checkout-pgbouncer --build
 
 up-db: up-loms-db up-checkout-db
 

@@ -14,18 +14,24 @@ import (
 
 var _ domain.ProductServiceClient = (*client)(nil)
 
+// ProductServiceClientInterface defines the interface for product service client
+type ProductServiceClientInterface interface {
+	GetProduct(ctx context.Context, in *productServiceAPI.GetProductRequest, opts ...grpc.CallOption) (*productServiceAPI.GetProductResponse, error)
+	ListSkus(ctx context.Context, in *productServiceAPI.ListSkusRequest, opts ...grpc.CallOption) (*productServiceAPI.ListSkusResponse, error)
+}
+
 // Client ...
 type client struct {
-	productClient         productServiceAPI.ProductServiceClient
+	productClient         ProductServiceClientInterface
 	token                 string
 	productServiceLimiter ratelimiter.Limiter
 	cache                 cache.Cache[domain.Product]
 }
 
-// NewClient ...
-func NewClient(cc *grpc.ClientConn, token string, productServiceLimiter ratelimiter.Limiter, cache cache.Cache[domain.Product]) *client {
+// NewClient creates a new product client
+func NewClient(clientInterface ProductServiceClientInterface, token string, productServiceLimiter ratelimiter.Limiter, cache cache.Cache[domain.Product]) *client {
 	return &client{
-		productClient:         productServiceAPI.NewProductServiceClient(cc),
+		productClient:         clientInterface,
 		token:                 token,
 		productServiceLimiter: productServiceLimiter,
 		cache:                 cache,

@@ -10,6 +10,7 @@ import (
 	"route256/libs/metrics"
 
 	lomsServiceAPI "route256/loms/pkg/loms_v1"
+	productServiceAPI "route256/product/pkg/product_v1"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"go.uber.org/zap"
@@ -65,9 +66,10 @@ func main() {
 		log.Fatal("failed to connect to server: %v", zap.Error(err))
 	}
 	defer productConn.Close()
+	productClient := productServiceAPI.NewProductServiceClient(productConn)
 
 	// server init
-	server, closeServer := server.Server(server.Externals{Log: log, Metrics: &metrics, LomsClient: lomsServiceAPI.NewLomsV1Client(lomsConn), ProductConn: productConn, PgPool: pool})
+	server, closeServer := server.Server(server.Externals{Log: log, Metrics: &metrics, LomsClient: lomsServiceAPI.NewLomsV1Client(lomsConn), ProductClient: productClient, PgPool: pool})
 	defer closeServer()
 
 	if err != nil {

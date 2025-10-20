@@ -83,4 +83,7 @@ migration-run:
 	sh ./migration.sh
 
 gen-loms-client-mock:
-	mockgen route256/loms/pkg/loms_v1 LomsV1Client > tests/mocks/loms_client_mock.go
+	mockgen route256/loms/pkg/loms_v1 LomsV1Client > tests/mocks/loms/loms_client_mock.go
+
+gen-product-client-mock:
+	mockgen route256/product/pkg/product_v1 ProductServiceClient > tests/mocks/product/product_client_mock.go
