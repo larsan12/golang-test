@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/golang/mock/gomock"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -39,8 +38,8 @@ type ServiceSuite struct {
 	Grpc checkout.CheckoutV1Client
 
 	// clients mocks
-	LomsClient    *mock_loms_v1.MockLomsV1Client
-	ProductClient *mock_product_v1.MockProductServiceClient
+	LomsClient    *mock_loms_v1.LomsV1Client
+	ProductClient *mock_product_v1.ProductServiceClient
 
 	// test hooks
 	beforeEach func()
@@ -70,16 +69,14 @@ func (s *ServiceSuite) SetupSubTest() {
 
 	log := logger.New(true)
 
-	// client with mocks
-	lomsController := gomock.NewController(&testing.T{})
-	s.LomsClient = mock_loms_v1.NewMockLomsV1Client(lomsController)
+	// client with mocks (mockery)
+	s.LomsClient = mock_loms_v1.NewLomsV1Client(s.T())
 
-	// product client mock
-	productController := gomock.NewController(&testing.T{})
-	s.ProductClient = mock_product_v1.NewMockProductServiceClient(productController)
+	// product client mock (mockery)
+	s.ProductClient = mock_product_v1.NewProductServiceClient(s.T())
 
 	// init server
-	server, closeServer := server.Server(server.Externals{Log: log, Metrics: nil, LomsClient: s.LomsClient, ProductClient: s.ProductClient, PgPool: s.Pool})
+	server, _ := server.Server(server.Externals{Log: log, Metrics: nil, LomsClient: s.LomsClient, ProductClient: s.ProductClient, PgPool: s.Pool})
 
 	lis := bufconn.Listen(1024 * 1024)
 	go func() {
@@ -102,7 +99,7 @@ func (s *ServiceSuite) SetupSubTest() {
 	s.T().Cleanup(func() {
 		conn.Close()
 		lis.Close()
-		closeServer()
+		//closeServer()
 		if _, err := s.Pool.Exec(s.ctx, "SELECT pg_advisory_unlock(0)"); err != nil {
 			s.T().Fatal(err)
 		}
